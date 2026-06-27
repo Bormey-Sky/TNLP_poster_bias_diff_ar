@@ -28,9 +28,11 @@ MODEL_REGISTRY = {
     "mdlm_169m": {
         "hf_id": "kuleshov-group/mdlm-no_flashattn-fp32-owt",
         "loader": "masked",        # AutoModelForMaskedLM
-        "trust_remote_code": True,
+        "trust_remote_code": True, # required — checkpoint has custom modeling code
         "model_type": "dlm",       # diffusion language model
         "mask_token_id": 50257,    # absorbing state = vocab_size, one beyond GPT-2 EOS
+        "tokenizer_id": "gpt2",    # MDLM does not ship its own tokenizer — use GPT-2
+        "patch_flash_attn_import": True,  # strip flash_attn from get_imports check
     },
     "pythia_160m": {
         "hf_id": "EleutherAI/pythia-160m",
@@ -90,7 +92,7 @@ def load_model(model_name: str, device: str = "cpu", quantize: bool = False):
         )
 
     config = MODEL_REGISTRY[model_name]
-    tokenizer = _load_tokenizer(config["hf_id"], config["trust_remote_code"], config["model_type"])
+    tokenizer = _load_tokenizer(config["hf_id"], config["trust_remote_code"], config["model_type"], config.get("tokenizer_id"))
     model = _load_base_model(config, device, quantize)
 
     return model, tokenizer
@@ -143,7 +145,7 @@ def load_finetuned(
 
     # Load base model first, then attach adapter on top
     config = MODEL_REGISTRY[model_name]
-    tokenizer = _load_tokenizer(config["hf_id"], config["trust_remote_code"], config["model_type"])
+    tokenizer = _load_tokenizer(config["hf_id"], config["trust_remote_code"], config["model_type"], config.get("tokenizer_id"))
     base_model = _load_base_model(config, device, quantize)
 
     # Attach LoRA adapter — adapter is NOT merged so base weights stay intact
@@ -174,7 +176,7 @@ def _get_quantization_config():
     )
 
 
-def _load_tokenizer(hf_id: str, trust_remote_code: bool, model_type: str):
+def _load_tokenizer(hf_id: str, trust_remote_code: bool, model_type: str, tokenizer_id: str = None):
     """
     Load tokenizer for a given HuggingFace model ID.
 
@@ -190,15 +192,19 @@ def _load_tokenizer(hf_id: str, trust_remote_code: bool, model_type: str):
        we leave them at the default ('right').
 
     Args:
-        hf_id:             HuggingFace model ID string
+        hf_id:             HuggingFace model ID string (used as fallback)
         trust_remote_code: passed through to AutoTokenizer
         model_type:        'ar' or 'dlm' — determines padding side
+        tokenizer_id:      override tokenizer source (e.g. 'gpt2' for MDLM
+                           which does not ship its own tokenizer)
 
     Returns:
         tokenizer with pad_token and padding_side set correctly
     """
+    # Use tokenizer_id override if provided (e.g. MDLM uses GPT-2 tokenizer)
+    tok_source = tokenizer_id if tokenizer_id is not None else hf_id
     tokenizer = AutoTokenizer.from_pretrained(
-        hf_id,
+        tok_source,
         trust_remote_code=trust_remote_code,
     )
 
@@ -236,6 +242,32 @@ def _load_base_model(config: dict, device: str, quantize: bool):
     hf_id = config["hf_id"]
     trust = config["trust_remote_code"]
 
+    # MDLM's custom modeling file lists flash_attn as a required import even
+    # though the no_flashattn checkpoint never calls it at runtime.
+    # We patch transformers.dynamic_module_utils.get_imports to strip
+    # flash_attn from the requirements list before the import check fires.
+    # This is the standard fix for models with unnecessary flash_attn deps.
+    # See: https://huggingface.co/microsoft/Florence-2-base/discussions/4
+    # On Mac CPU, MDLM's custom modeling file lists flash_attn as a required
+    # import even though the no_flashattn checkpoint never calls it at runtime.
+    # We patch get_imports to strip flash_attn from the check — but only when
+    # CUDA is not available (i.e. Mac local). On Colab, flash_attn installs
+    # natively so no patch is needed.
+    patch_ctx = None
+    if config.get("patch_flash_attn_import") and not torch.cuda.is_available():
+        from unittest.mock import patch
+        from transformers.dynamic_module_utils import get_imports
+
+        def _get_imports_no_flash(filename):
+            imports = get_imports(filename)
+            return [i for i in imports if i != "flash_attn"]
+
+        patch_ctx = patch(
+            "transformers.dynamic_module_utils.get_imports",
+            _get_imports_no_flash,
+        )
+        patch_ctx.start()
+
     # bitsandbytes 4-bit requires device_map='auto' — overrides user device
     if quantize:
         quant_cfg = _get_quantization_config()
@@ -259,6 +291,10 @@ def _load_base_model(config: dict, device: str, quantize: bool):
         model = AutoModel.from_pretrained(hf_id, **kwargs)
     else:
         raise ValueError(f"Unknown loader type '{loader}' in MODEL_REGISTRY.")
+
+    # Stop the patch — only active during model loading
+    if patch_ctx is not None:
+        patch_ctx.stop()
 
     # Move to device only when not quantized
     # (quantized models are already placed by device_map='auto')
