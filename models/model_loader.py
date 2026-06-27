@@ -242,31 +242,43 @@ def _load_base_model(config: dict, device: str, quantize: bool):
     hf_id = config["hf_id"]
     trust = config["trust_remote_code"]
 
-    # MDLM's custom modeling file lists flash_attn as a required import even
+    # MDLM's custom modeling files import flash_attn at the top level even
     # though the no_flashattn checkpoint never calls it at runtime.
-    # We patch transformers.dynamic_module_utils.get_imports to strip
-    # flash_attn from the requirements list before the import check fires.
-    # This is the standard fix for models with unnecessary flash_attn deps.
-    # See: https://huggingface.co/microsoft/Florence-2-base/discussions/4
-    # On Mac CPU, MDLM's custom modeling file lists flash_attn as a required
-    # import even though the no_flashattn checkpoint never calls it at runtime.
-    # We patch get_imports to strip flash_attn from the check — but only when
-    # CUDA is not available (i.e. Mac local). On Colab, flash_attn installs
-    # natively so no patch is needed.
-    patch_ctx = None
-    if config.get("patch_flash_attn_import") and not torch.cuda.is_available():
-        from unittest.mock import patch
-        from transformers.dynamic_module_utils import get_imports
+    # flash_attn has no pre-built wheel for torch 2.11+cu128 (Colab June 2025)
+    # and building from source fails. The fix: download the model files via
+    # snapshot_download, patch the flash_attn import to a try/except in every
+    # .py file, then load from the patched local path.
+    # This runs once — on subsequent calls the cached files are already patched.
+    if config.get("patch_flash_attn_import"):
+        import re
+        import glob
+        from huggingface_hub import snapshot_download
 
-        def _get_imports_no_flash(filename):
-            imports = get_imports(filename)
-            return [i for i in imports if i != "flash_attn"]
+        local_path = snapshot_download(hf_id)
 
-        patch_ctx = patch(
-            "transformers.dynamic_module_utils.get_imports",
-            _get_imports_no_flash,
-        )
-        patch_ctx.start()
+        for fpath in glob.glob(f"{local_path}/*.py"):
+            src = open(fpath).read()
+            if "flash_attn" in src and "try:" not in src:
+                print(f"Patching flash_attn import in {fpath}")
+                patched = re.sub(
+                    r"(from flash_attn import [^
+]+
+)",
+                    (
+                        "try:
+"
+                        "    \1"
+                        "except ImportError:
+"
+                        "    pass  # flash_attn not available — no_flashattn checkpoint
+"
+                    ),
+                    src,
+                )
+                open(fpath, "w").write(patched)
+
+        # Load from patched local path instead of HF hub
+        hf_id = local_path
 
     # bitsandbytes 4-bit requires device_map='auto' — overrides user device
     if quantize:
@@ -291,10 +303,6 @@ def _load_base_model(config: dict, device: str, quantize: bool):
         model = AutoModel.from_pretrained(hf_id, **kwargs)
     else:
         raise ValueError(f"Unknown loader type '{loader}' in MODEL_REGISTRY.")
-
-    # Stop the patch — only active during model loading
-    if patch_ctx is not None:
-        patch_ctx.stop()
 
     # Move to device only when not quantized
     # (quantized models are already placed by device_map='auto')
