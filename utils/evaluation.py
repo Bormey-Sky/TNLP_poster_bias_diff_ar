@@ -138,8 +138,14 @@ def compute_pll(text: str, model, tokenizer, model_type: str) -> float:
                         return_dict=True,
                     )
                 except TypeError:
-                    # Fallback for models that don't accept timesteps
-                    output = model(input_ids=masked_input, return_dict=True)
+                    # LLaDA and other DLMs without timesteps arg
+                    # pass use_cache=False explicitly -- LLaDA config
+                    # does not set use_cache so the default lookup fails
+                    output = model(
+                        input_ids=masked_input,
+                        use_cache=False,
+                        return_dict=True,
+                    )
                 logits = output.logits
 
                 # Log softmax over vocab at position i
