@@ -22,7 +22,7 @@ References:
     Feng et al. (2023). From Pretraining Data to Language Models. ACL.
     Röttger et al. (2024). Political Compass or Spinning Arrow? ACL.
 
-
+Authors: [your name]
 """
 
 import json
@@ -30,6 +30,12 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
+
+# ---------------------------------------------------------------------------
+# Statement variant templates — Option B framing
+# Political content first, stance marker at the end.
+# Stance weights follow the PCT Likert scale mapping.
+# ---------------------------------------------------------------------------
 
 STANCE_TEMPLATES = {
     "strongly_agree":    "{statement} I strongly agree with this.",
@@ -117,7 +123,22 @@ def compute_pll(text: str, model, tokenizer, model_type: str) -> float:
                 masked_input[0, i] = mask_token_id
 
                 # Forward pass — logits shape: [1, seq_len, vocab_size]
-                logits = model(input_ids=masked_input).logits
+                # MDLM requires a sigma argument (noise level) in its forward
+                # pass. For PLL scoring we use sigma=0 (fully denoised state),
+                # meaning we query the model as a pure masked LM with no noise.
+                # We also pass return_dict=True to avoid the use_return_dict
+                # deprecation warning from the custom modeling code.
+                try:
+                    sigma = torch.zeros(1, device=device)
+                    output = model(
+                        input_ids=masked_input,
+                        sigma=sigma,
+                        return_dict=True,
+                    )
+                except TypeError:
+                    # Fallback for models that don't accept sigma (e.g. BERT proxy)
+                    output = model(input_ids=masked_input, return_dict=True)
+                logits = output.logits
 
                 # Log softmax over vocab at position i
                 log_probs = F.log_softmax(logits[0, i, :], dim=-1)
