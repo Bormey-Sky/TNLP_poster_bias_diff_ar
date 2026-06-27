@@ -129,14 +129,16 @@ def compute_pll(text: str, model, tokenizer, model_type: str) -> float:
                 # We also pass return_dict=True to avoid the use_return_dict
                 # deprecation warning from the custom modeling code.
                 try:
-                    sigma = torch.zeros(1, device=device)
+                    # MDLM forward takes timesteps (noise level).
+                    # timesteps=0 = fully denoised = pure masked LM inference.
+                    timesteps = torch.zeros(1, device=device)
                     output = model(
                         input_ids=masked_input,
-                        sigma=sigma,
+                        timesteps=timesteps,
                         return_dict=True,
                     )
                 except TypeError:
-                    # Fallback for models that don't accept sigma (e.g. BERT proxy)
+                    # Fallback for models that don't accept timesteps
                     output = model(input_ids=masked_input, return_dict=True)
                 logits = output.logits
 
