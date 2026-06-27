@@ -209,17 +209,19 @@ def _load_base_model(config: dict, device: str, quantize: bool):
     loader = config["loader"]
 
     if config.get("patch_flash_attn_import"):
-        # Patch check_imports to silently drop flash_attn from required list.
-        # The original raises ImportError if any required package is missing.
-        # Our patched version simply removes flash_attn from that list first.
-        original_check_imports = dmu.check_imports
+        # check_imports calls get_imports internally, then raises ImportError
+        # for any missing package. We patch get_imports to strip flash_attn
+        # from the list BEFORE check_imports iterates over it -- this prevents
+        # flash_attn from ever entering the missing_packages list.
+        # Confirmed from transformers source: check_imports calls get_imports,
+        # loops over result, raises if missing. Patching get_imports is correct.
+        original_get_imports = dmu.get_imports
 
-        def check_imports_no_flash(filename):
-            result = original_check_imports(filename)
-            # check_imports returns the list of imports -- filter flash_attn
-            return [i for i in result if i != "flash_attn"]
+        def get_imports_no_flash(filename):
+            imports = original_get_imports(filename)
+            return [i for i in imports if i != "flash_attn"]
 
-        with patch.object(dmu, "check_imports", check_imports_no_flash):
+        with patch.object(dmu, "get_imports", get_imports_no_flash):
             if loader == "masked":
                 model = AutoModelForMaskedLM.from_pretrained(hf_id, **kwargs)
             elif loader == "causal":
