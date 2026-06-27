@@ -34,6 +34,7 @@ MODEL_REGISTRY = {
         "model_type": "dlm",
         "mask_token_id": 50257,    # absorbing state = vocab_size, one beyond GPT-2 EOS
         "tokenizer_id": "gpt2",   # MDLM does not ship its own tokenizer -- use GPT-2
+        "patch_tied_weights": True,  # add all_tied_weights_keys for newer transformers
     },
     "pythia_160m": {
         "hf_id": "EleutherAI/pythia-160m",
@@ -189,6 +190,26 @@ def _load_base_model(config: dict, device: str, quantize: bool):
     """
     hf_id = config["hf_id"]
     trust = config["trust_remote_code"]
+
+    # MDLM's custom modeling code is written for an older transformers version
+    # that used _tied_weights_keys. Newer transformers expects all_tied_weights_keys.
+    # We patch the cached model file once per session after download so loading
+    # works regardless of transformers version. Safe to run multiple times.
+    if config.get("patch_tied_weights"):
+        import glob
+        from huggingface_hub import snapshot_download
+        local_path = snapshot_download(hf_id)
+        for fpath in glob.glob(f"{local_path}/../**/*.py", recursive=True):
+            src = open(fpath).read()
+            if "class MDLM(transformers.PreTrainedModel):" not in src:
+                continue
+            if "all_tied_weights_keys" in src:
+                break
+            needle = "class MDLM(transformers.PreTrainedModel):\n"
+            replacement = needle + "  all_tied_weights_keys = {}\n"
+            open(fpath, "w").write(src.replace(needle, replacement))
+            print(f"Patched all_tied_weights_keys in {fpath}")
+            break
 
     if quantize:
         kwargs = {
