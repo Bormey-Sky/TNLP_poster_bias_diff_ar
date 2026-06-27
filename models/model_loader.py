@@ -6,10 +6,13 @@ All model loading in the project goes through this module -- nothing else
 imports from transformers or peft directly.
 
 Models supported:
-    mdlm_169m   -- kuleshov-group/mdlm-no_flashattn-fp32-owt
+    mdlm_169m   -- kuleshov-group/mdlm-owt
     pythia_160m -- EleutherAI/pythia-160m
     llada_8b    -- GSAI-ML/LLaDA-8B-Base
     llama_8b    -- meta-llama/Llama-3.1-8B
+
+Colab setup (run once per session before main.py):
+    pip install "https://github.com/lesj0610/flash-attention/releases/download/v2.8.3-cu12-torch2.11/flash_attn-2.8.3+cu12torch2.11cxx11abiTRUE-cp312-cp312-linux_x86_64.whl"
 
 Authors: [your name]
 """
@@ -25,13 +28,12 @@ import torch
 
 MODEL_REGISTRY = {
     "mdlm_169m": {
-        "hf_id": "kuleshov-group/mdlm-no_flashattn-fp32-owt",
+        "hf_id": "kuleshov-group/mdlm-owt",
         "loader": "masked",
         "trust_remote_code": True,
         "model_type": "dlm",
-        "mask_token_id": 50257,
-        "tokenizer_id": "gpt2",
-        "patch_flash_attn_import": True,
+        "mask_token_id": 50257,    # absorbing state = vocab_size, one beyond GPT-2 EOS
+        "tokenizer_id": "gpt2",   # MDLM does not ship its own tokenizer -- use GPT-2
     },
     "pythia_160m": {
         "hf_id": "EleutherAI/pythia-160m",
@@ -45,7 +47,7 @@ MODEL_REGISTRY = {
         "loader": "auto",
         "trust_remote_code": True,
         "model_type": "dlm",
-        "mask_token_id": 126336,
+        "mask_token_id": 126336,   # <|mdmmask|> confirmed in ML-GSAI/LLaDA generate.py
     },
     "llama_8b": {
         "hf_id": "meta-llama/Llama-3.1-8B",
@@ -67,8 +69,8 @@ def load_model(model_name: str, device: str = "cpu", quantize: bool = False):
 
     Args:
         model_name: one of ['mdlm_169m', 'pythia_160m', 'llada_8b', 'llama_8b']
-        device:     'cpu' (default, local Mac) or 'cuda' (Colab)
-        quantize:   if True, load in 4-bit via bitsandbytes (Colab/CUDA only)
+        device:     'cpu' (local Mac) or 'cuda' (Colab)
+        quantize:   4-bit NF4 loading via bitsandbytes -- Colab only
 
     Returns:
         model, tokenizer
@@ -78,7 +80,6 @@ def load_model(model_name: str, device: str = "cpu", quantize: bool = False):
             f"Unknown model '{model_name}'. "
             f"Choose from: {list(MODEL_REGISTRY.keys())}"
         )
-
     if quantize and device == "cpu":
         raise RuntimeError(
             "quantize=True requires CUDA. Use device='cuda' or run on Colab."
@@ -103,7 +104,7 @@ def load_finetuned(
 ):
     """
     Load a base model and attach a saved LoRA adapter.
-    Adapter is NOT merged -- base weights stay intact for swapping.
+    Adapter is NOT merged -- base weights stay intact for adapter swapping.
 
     Args:
         model_name:      one of the four model keys
@@ -147,7 +148,7 @@ def load_finetuned(
 # ---------------------------------------------------------------------------
 
 def _get_quantization_config():
-    """NF4 4-bit config for large models on Colab (Dettmers et al. 2023)."""
+    """NF4 4-bit quantization config (Dettmers et al., 2023 QLoRA)."""
     return BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
@@ -164,7 +165,7 @@ def _load_tokenizer(
 ):
     """
     Load tokenizer. Handles missing pad token and padding side per paradigm.
-    MDLM uses GPT-2 tokenizer via tokenizer_id override.
+    MDLM uses GPT-2 tokenizer (tokenizer_id override).
     AR models get left padding; DLMs stay at default right.
     """
     tok_source = tokenizer_id if tokenizer_id is not None else hf_id
@@ -182,16 +183,10 @@ def _load_tokenizer(
 
 def _load_base_model(config: dict, device: str, quantize: bool):
     """
-    Dispatch to the correct AutoModel class.
-    For MDLM: patches transformers.dynamic_module_utils.check_imports
-    to strip flash_attn from the required packages list before loading.
-    This is needed because no pre-built flash_attn wheel exists for
-    torch 2.11+cu128 (Colab June 2025) and the no_flashattn checkpoint
-    does not use flash_attn at runtime -- only the import check blocks us.
+    Dispatch to the correct AutoModel class based on config['loader'].
+    Quantized models use device_map='auto' (required by bitsandbytes).
+    Non-quantized models are moved to device explicitly.
     """
-    from unittest.mock import patch
-    import transformers.dynamic_module_utils as dmu
-
     hf_id = config["hf_id"]
     trust = config["trust_remote_code"]
 
@@ -207,38 +202,14 @@ def _load_base_model(config: dict, device: str, quantize: bool):
         }
 
     loader = config["loader"]
-
-    if config.get("patch_flash_attn_import"):
-        # check_imports calls get_imports internally, then raises ImportError
-        # for any missing package. We patch get_imports to strip flash_attn
-        # from the list BEFORE check_imports iterates over it -- this prevents
-        # flash_attn from ever entering the missing_packages list.
-        # Confirmed from transformers source: check_imports calls get_imports,
-        # loops over result, raises if missing. Patching get_imports is correct.
-        original_get_imports = dmu.get_imports
-
-        def get_imports_no_flash(filename):
-            imports = original_get_imports(filename)
-            return [i for i in imports if i != "flash_attn"]
-
-        with patch.object(dmu, "get_imports", get_imports_no_flash):
-            if loader == "masked":
-                model = AutoModelForMaskedLM.from_pretrained(hf_id, **kwargs)
-            elif loader == "causal":
-                model = AutoModelForCausalLM.from_pretrained(hf_id, **kwargs)
-            elif loader == "auto":
-                model = AutoModel.from_pretrained(hf_id, **kwargs)
-            else:
-                raise ValueError(f"Unknown loader type '{loader}'.")
+    if loader == "masked":
+        model = AutoModelForMaskedLM.from_pretrained(hf_id, **kwargs)
+    elif loader == "causal":
+        model = AutoModelForCausalLM.from_pretrained(hf_id, **kwargs)
+    elif loader == "auto":
+        model = AutoModel.from_pretrained(hf_id, **kwargs)
     else:
-        if loader == "masked":
-            model = AutoModelForMaskedLM.from_pretrained(hf_id, **kwargs)
-        elif loader == "causal":
-            model = AutoModelForCausalLM.from_pretrained(hf_id, **kwargs)
-        elif loader == "auto":
-            model = AutoModel.from_pretrained(hf_id, **kwargs)
-        else:
-            raise ValueError(f"Unknown loader type '{loader}'.")
+        raise ValueError(f"Unknown loader type '{loader}' in MODEL_REGISTRY.")
 
     if not quantize:
         model = model.to(device)
