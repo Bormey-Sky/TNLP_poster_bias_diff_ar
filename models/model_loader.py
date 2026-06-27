@@ -11,13 +11,19 @@ Models supported:
     llada_8b    -- GSAI-ML/LLaDA-8B-Base
     llama_8b    -- meta-llama/Llama-3.1-8B
 
-Colab setup (run once per session before main.py):
-    pip install "https://github.com/lesj0610/flash-attention/releases/download/v2.8.3-cu12-torch2.11/flash_attn-2.8.3+cu12torch2.11cxx11abiTRUE-cp312-cp312-linux_x86_64.whl"
+Colab setup (A100, run once per session):
+    pip install flash-attn (see README for exact wheel URL)
 
 Authors: [your name]
 """
 
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForMaskedLM, AutoModel, BitsAndBytesConfig
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    AutoModelForMaskedLM,
+    AutoModel,
+    BitsAndBytesConfig,
+)
 from peft import PeftModel
 import torch
 
@@ -32,9 +38,9 @@ MODEL_REGISTRY = {
         "loader": "masked",
         "trust_remote_code": True,
         "model_type": "dlm",
-        "mask_token_id": 50257,    # absorbing state = vocab_size, one beyond GPT-2 EOS
-        "tokenizer_id": "gpt2",   # MDLM does not ship its own tokenizer -- use GPT-2
-        "patch_tied_weights": True,  # add all_tied_weights_keys for newer transformers
+        "mask_token_id": 50257,
+        "tokenizer_id": "gpt2",
+        "patch_tied_weights": True,
     },
     "pythia_160m": {
         "hf_id": "EleutherAI/pythia-160m",
@@ -48,7 +54,8 @@ MODEL_REGISTRY = {
         "loader": "auto",
         "trust_remote_code": True,
         "model_type": "dlm",
-        "mask_token_id": 126336,   # <|mdmmask|> confirmed in ML-GSAI/LLaDA generate.py
+        "mask_token_id": 126336,
+        "patch_tied_weights": True,
     },
     "llama_8b": {
         "hf_id": "meta-llama/Llama-3.1-8B",
@@ -69,9 +76,9 @@ def load_model(model_name: str, device: str = "cpu", quantize: bool = False):
     Load a base model and its tokenizer from HuggingFace.
 
     Args:
-        model_name: one of ['mdlm_169m', 'pythia_160m', 'llada_8b', 'llama_8b']
-        device:     'cpu' (local Mac) or 'cuda' (Colab)
-        quantize:   4-bit NF4 loading via bitsandbytes -- Colab only
+        model_name: one of the four model keys
+        device:     cpu (local) or cuda (Colab)
+        quantize:   4-bit NF4 via bitsandbytes -- Colab only
 
     Returns:
         model, tokenizer
@@ -85,7 +92,6 @@ def load_model(model_name: str, device: str = "cpu", quantize: bool = False):
         raise RuntimeError(
             "quantize=True requires CUDA. Use device='cuda' or run on Colab."
         )
-
     config = MODEL_REGISTRY[model_name]
     tokenizer = _load_tokenizer(
         config["hf_id"],
@@ -110,7 +116,7 @@ def load_finetuned(
     Args:
         model_name:      one of the four model keys
         checkpoint_path: path to saved LoRA adapter directory
-        device:          'cpu' or 'cuda'
+        device:          cpu or cuda
         quantize:        4-bit loading for large models on Colab
 
     Returns:
@@ -131,7 +137,6 @@ def load_finetuned(
         raise RuntimeError(
             "quantize=True requires CUDA. Use device='cuda' or run on Colab."
         )
-
     config = MODEL_REGISTRY[model_name]
     tokenizer = _load_tokenizer(
         config["hf_id"],
@@ -182,34 +187,56 @@ def _load_tokenizer(
     return tokenizer
 
 
+def _patch_tied_weights():
+    """
+    Patch cached HuggingFace module files to add all_tied_weights_keys.
+
+    Newer transformers versions expect this attribute on PreTrainedModel
+    subclasses. MDLM and LLaDA were written for older versions that used
+    _tied_weights_keys. This patches every relevant cached .py file once
+    per session. Safe to call multiple times -- skips already-patched files.
+    """
+    import glob
+    MARKER = "all_tied_weights_keys"
+    ATTR_LINE = "    " + MARKER + " = dict()\n"
+    search_root = "/root/.cache/huggingface/modules/transformers_modules"
+
+    for fpath in glob.glob(f"{search_root}/**/*.py", recursive=True):
+        try:
+            src = open(fpath).read()
+        except Exception:
+            continue
+        if MARKER in src:
+            continue
+        if "PreTrainedModel" not in src:
+            continue
+
+        lines = src.splitlines(keepends=True)
+        out = []
+        changed = False
+        for line in lines:
+            out.append(line)
+            stripped = line.rstrip()
+            if "PreTrainedModel" in stripped and stripped.endswith("):"):
+                out.append(ATTR_LINE)
+                changed = True
+        if changed:
+            open(fpath, "w").write("".join(out))
+            print(f"Patched {MARKER} in {fpath}")
+
+
 def _load_base_model(config: dict, device: str, quantize: bool):
     """
-    Dispatch to the correct AutoModel class based on config['loader'].
-    Quantized models use device_map='auto' (required by bitsandbytes).
+    Dispatch to the correct AutoModel class based on config loader field.
+    Patches cached model files for tied weights compatibility before loading.
+    Quantized models use device_map=auto (required by bitsandbytes).
     Non-quantized models are moved to device explicitly.
     """
     hf_id = config["hf_id"]
     trust = config["trust_remote_code"]
 
-    # MDLM's custom modeling code is written for an older transformers version
-    # that used _tied_weights_keys. Newer transformers expects all_tied_weights_keys.
-    # We patch the cached model file once per session after download so loading
-    # works regardless of transformers version. Safe to run multiple times.
     if config.get("patch_tied_weights"):
-        import glob
-        from huggingface_hub import snapshot_download
-        local_path = snapshot_download(hf_id)
-        for fpath in glob.glob(f"{local_path}/../**/*.py", recursive=True):
-            src = open(fpath).read()
-            if "class MDLM(transformers.PreTrainedModel):" not in src:
-                continue
-            if "all_tied_weights_keys" in src:
-                break
-            needle = "class MDLM(transformers.PreTrainedModel):\n"
-            replacement = needle + "  all_tied_weights_keys = {}\n"
-            open(fpath, "w").write(src.replace(needle, replacement))
-            print(f"Patched all_tied_weights_keys in {fpath}")
-            break
+        _patch_tied_weights()
 
     if quantize:
         kwargs = {
