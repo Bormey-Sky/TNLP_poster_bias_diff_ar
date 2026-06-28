@@ -1,29 +1,24 @@
 """
-main.py
+Run examples:
 
-Single entry point for the bias_diffusion experiment pipeline.
-Routes to the correct module based on --step argument.
-
-Usage examples:
-
-    # Step 1 — evaluate base model (PLL + PCT)
+    # step 1 — evaluate base model (PLL + PCT)
     python main.py --step evaluate \
         --model pythia_160m \
         --model_type ar \
         --statements_path data/pct_statements.json \
         --output_path results/base/pythia_160m.json
 
-    # Step 2 — prepare corpus
+    # step 2 — prepare corpus
     python main.py --step prepare_corpus \
         --output_dir data/corpus
 
-    # Step 3 — tokenize corpus per model
+    # step 3 — tokenize corpus per model
     python main.py --step tokenize \
         --model pythia_160m \
         --corpus_dir data/corpus \
         --output_dir data/tokenized
 
-    # Step 4 — finetune
+    # step 4 — finetune
     python main.py --step finetune \
         --model llada_8b \
         --model_type dlm \
@@ -32,7 +27,7 @@ Usage examples:
         --output_dir /content/drive/MyDrive/bias_diffusion/checkpoints/llada_8b_left \
         --quantize
 
-    # Step 5 — evaluate finetuned checkpoint
+    # step 5 — evaluate finetuned checkpoint
     python main.py --step evaluate \
         --model llada_8b \
         --model_type dlm \
@@ -41,12 +36,11 @@ Usage examples:
         --output_path results/finetuned/llada_8b_left.json \
         --quantize
 
-    # Step 6 — plot compass
+    # step 6 — plot compass
     python main.py --step plot \
         --results_dir results/ \
         --output_dir results/plots/
 
-Authors: [your name]
 """
 
 import argparse
@@ -192,17 +186,12 @@ def parse_args():
     return parser.parse_args()
 
 
-# ---------------------------------------------------------------------------
-# Step runners — each imports its module only when needed
-# ---------------------------------------------------------------------------
-
 def run_evaluate(args):
     """Load model and run PCT evaluation. Saves results to output_path."""
     import json
     import os
     from models.model_loader import load_model, load_finetuned
 
-    # Validate required args
     if args.model is None:
         print("Error: --model is required for --step evaluate")
         sys.exit(1)
@@ -213,7 +202,6 @@ def run_evaluate(args):
         print("Error: --output_path is required for --step evaluate")
         sys.exit(1)
 
-    # Load model — base or finetuned
     if args.checkpoint is None:
         print(f"Loading base model: {args.model}")
         model, tokenizer = load_model(
@@ -230,7 +218,6 @@ def run_evaluate(args):
             quantize=args.quantize,
         )
 
-    # Run PCT evaluation
     from utils.evaluation import evaluate_pct
     print(f"Running PCT evaluation ({args.model_type.upper()})...")
     results = evaluate_pct(
@@ -240,13 +227,11 @@ def run_evaluate(args):
         statements_path=args.statements_path,
     )
 
-    # Add metadata to results
     results["model"]      = args.model
     results["model_type"] = args.model_type
     results["checkpoint"] = args.checkpoint if args.checkpoint else "base"
     results["condition"]  = args.condition if args.condition else "base"
 
-    # Save results
     os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
     with open(args.output_path, "w") as f:
         json.dump(results, f, indent=2)
@@ -309,10 +294,6 @@ def run_plot(args):
         output_dir=args.output_dir,
     )
 
-
-# ---------------------------------------------------------------------------
-# Main router
-# ---------------------------------------------------------------------------
 
 def main():
     args = parse_args()
