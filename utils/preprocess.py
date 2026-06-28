@@ -96,25 +96,37 @@ def prepare_corpus(
 
     for condition, fpath in condition_files.items():
         print(f"Loading {condition} corpus from {fpath}...")
-        with open(fpath) as f:
-            raw_data = json.load(f)
-        print(f"  Found {len(raw_data)} articles before cleaning")
 
-        # Build article dicts -- join paragraph list into full text
+        # Stream the JSON array without loading the full file into memory.
+        # We read article by article using ijson, collecting clean articles
+        # until we have enough. This avoids loading 3GB for 1000 articles.
+        # We read up to OVERSAMPLE_FACTOR * n_articles raw articles to ensure
+        # enough survive cleaning, then randomly sample from those.
+        OVERSAMPLE_FACTOR = 5
+        target_raw = n_articles * OVERSAMPLE_FACTOR
+
         raw = []
-        for i, ex in enumerate(raw_data):
-            # text is a list of paragraph strings -- join into one string
-            if isinstance(ex["text"], list):
-                full_text = " ".join(ex["text"])
-            else:
-                full_text = ex["text"]
+        read_count = 0
+        with open(fpath) as f:
+            # File is a JSON array -- use ijson to stream items
+            import ijson
+            for ex in ijson.items(f, "item"):
+                if isinstance(ex["text"], list):
+                    full_text = " ".join(ex["text"])
+                else:
+                    full_text = str(ex["text"])
 
-            raw.append({
-                "id":     str(i),
-                "text":   full_text,
-                "label":  condition,
-                "source": ex.get("source", ""),
-            })
+                raw.append({
+                    "id":     str(read_count),
+                    "text":   full_text,
+                    "label":  condition,
+                    "source": ex.get("source", ""),
+                })
+                read_count += 1
+                if read_count >= target_raw:
+                    break
+
+        print(f"  Read {read_count} articles from file")
 
         # Clean
         cleaned = _clean_articles(raw)
@@ -124,10 +136,10 @@ def prepare_corpus(
             raise ValueError(
                 f"Not enough {condition} articles after cleaning. "
                 f"Found {len(cleaned)}, need {n_articles}. "
-                f"Lower n_articles or relax cleaning filters."
+                f"Increase OVERSAMPLE_FACTOR or relax cleaning filters."
             )
 
-        # Subsample
+        # Subsample randomly from cleaned pool
         sampled = random.sample(cleaned, n_articles)
         print(f"  Sampled {len(sampled)} articles")
 
