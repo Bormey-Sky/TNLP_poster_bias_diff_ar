@@ -23,10 +23,13 @@ from transformers import (
     AutoModelForMaskedLM,
     AutoModel,
     BitsAndBytesConfig,
+    PreTrainedModel,
 )
 from peft import PeftModel
 import torch
 
+if not hasattr(PreTrainedModel, 'all_tied_weights_keys'):
+    PreTrainedModel.all_tied_weights_keys = dict()
 
 # ---------------------------------------------------------------------------
 # Model registry
