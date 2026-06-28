@@ -56,9 +56,7 @@ def parse_args():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
-    # -----------------------------------------------------------------------
     # Required: pipeline step
-    # -----------------------------------------------------------------------
     parser.add_argument(
         "--step",
         required=True,
@@ -73,9 +71,6 @@ def parse_args():
         ),
     )
 
-    # -----------------------------------------------------------------------
-    # Model args — used by evaluate, tokenize, finetune
-    # -----------------------------------------------------------------------
     parser.add_argument(
         "--model",
         choices=["mdlm_169m", "pythia_160m", "llada_8b", "llama_8b"],
@@ -104,9 +99,6 @@ def parse_args():
         help="Device to load model on. Default: cpu.",
     )
 
-    # -----------------------------------------------------------------------
-    # Checkpoint — used by evaluate (finetuned) and finetune (output)
-    # -----------------------------------------------------------------------
     parser.add_argument(
         "--checkpoint",
         type=str,
@@ -118,9 +110,6 @@ def parse_args():
         ),
     )
 
-    # -----------------------------------------------------------------------
-    # Evaluate args
-    # -----------------------------------------------------------------------
     parser.add_argument(
         "--statements_path",
         type=str,
@@ -137,9 +126,6 @@ def parse_args():
         ),
     )
 
-    # -----------------------------------------------------------------------
-    # Corpus args
-    # -----------------------------------------------------------------------
     parser.add_argument(
         "--output_dir",
         type=str,
@@ -160,22 +146,16 @@ def parse_args():
     parser.add_argument(
         "--n_articles",
         type=int,
-        default=600,
+        default=1000,
         help="Number of articles per condition to sample. Used by: prepare_corpus.",
     )
 
-    # -----------------------------------------------------------------------
-    # Finetune args
-    # -----------------------------------------------------------------------
     parser.add_argument(
         "--condition",
         choices=["left", "right"],
         help="Corpus political condition. Required for: finetune.",
     )
 
-    # -----------------------------------------------------------------------
-    # Plot args
-    # -----------------------------------------------------------------------
     parser.add_argument(
         "--results_dir",
         type=str,

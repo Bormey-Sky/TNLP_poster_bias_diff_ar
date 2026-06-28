@@ -61,50 +61,60 @@ TOKENIZER_MAP = {
 # Public API
 # ---------------------------------------------------------------------------
 
-def prepare_corpus(output_dir: str, n_articles: int = 800):
+def prepare_corpus(
+    output_dir: str,
+    n_articles: int = 1000,
+    left_path: str = "data/BIGNEWSBLN_left.json",
+    right_path: str = "data/BIGNEWSBLN_right.json",
+):
     """
-    Download, clean, and subsample the POLITICS dataset.
+    Load, clean, and subsample the BIGNEWSBLN corpus (Liu et al., 2022).
 
-    Filters to left (label=0) and right (label=2) articles only.
-    Applies cleaning: min/max word count, deduplication by first 100 chars.
-    Subsamples n_articles per condition with a fixed random seed.
+    Reads local BIGNEWSBLN left and right JSON files (each a list of article
+    dicts), joins paragraph lists into full article text, applies cleaning,
+    and subsamples n_articles per condition with a fixed random seed.
 
     Args:
-        output_dir: directory to save left.json and right.json
-        n_articles: number of articles per condition (default 800)
+        output_dir:   directory to save left.json and right.json
+        n_articles:   number of articles per condition (default 1000)
+        left_path:    path to BIGNEWSBLN_left.json
+        right_path:   path to BIGNEWSBLN_right.json
 
     Saves:
         output_dir/left.json   -- list of article dicts
         output_dir/right.json  -- list of article dicts
 
-    Each article dict has keys: 'id', 'text', 'label'
+    Each article dict has keys: 'id', 'text', 'label', 'source'
     """
     os.makedirs(output_dir, exist_ok=True)
     random.seed(RANDOM_SEED)
 
-    print("Loading POLITICS dataset from HuggingFace...")
-    ds = load_dataset("launch/politics", split="train")
+    condition_files = {
+        "left":  left_path,
+        "right": right_path,
+    }
 
-    # Check label type from first example
-    sample_label = ds[0]["label"]
-    print(f"Label type: {type(sample_label).__name__}, example value: {sample_label}")
+    for condition, fpath in condition_files.items():
+        print(f"Loading {condition} corpus from {fpath}...")
+        with open(fpath) as f:
+            raw_data = json.load(f)
+        print(f"  Found {len(raw_data)} articles before cleaning")
 
-    for condition, label_val in LABEL_MAP.items():
-        print(f"Processing {condition} articles (label={label_val})...")
+        # Build article dicts -- join paragraph list into full text
+        raw = []
+        for i, ex in enumerate(raw_data):
+            # text is a list of paragraph strings -- join into one string
+            if isinstance(ex["text"], list):
+                full_text = " ".join(ex["text"])
+            else:
+                full_text = ex["text"]
 
-        # Filter by label -- handle both int and string label types
-        if isinstance(sample_label, str):
-            filtered = [ex for ex in ds if ex["label"].lower() == condition]
-        else:
-            filtered = [ex for ex in ds if ex["label"] == label_val]
-
-        print(f"  Found {len(filtered)} articles before cleaning")
-
-        # Build article dicts
-        raw = [
-            {"id": str(i), "text": ex["text"], "label": condition}
-            for i, ex in enumerate(filtered)
-        ]
+            raw.append({
+                "id":     str(i),
+                "text":   full_text,
+                "label":  condition,
+                "source": ex.get("source", ""),
+            })
 
         # Clean
         cleaned = _clean_articles(raw)
