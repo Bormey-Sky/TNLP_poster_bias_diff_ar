@@ -162,6 +162,19 @@ def parse_args():
         default="results/",
         help="Directory containing base/ and finetuned/ JSON results. Used by: plot.",
     )
+    
+    parser.add_argument(
+    "--left_path",
+    type=str,
+    default="data/BIGNEWSBLN_left.json",
+    help="Path to BIGNEWSBLN left corpus JSON. Used by: prepare_corpus.",
+)
+    parser.add_argument(
+        "--right_path",
+        type=str,
+        default="data/BIGNEWSBLN_right.json",
+        help="Path to BIGNEWSBLN right corpus JSON. Used by: prepare_corpus.",
+    )
 
     return parser.parse_args()
 
@@ -226,7 +239,7 @@ def run_prepare_corpus(args):
         print("Error: --output_dir is required for --step prepare_corpus")
         sys.exit(1)
     from utils.preprocess import prepare_corpus
-    prepare_corpus(output_dir=args.output_dir, n_articles=args.n_articles)
+    prepare_corpus(output_dir=args.output_dir, n_articles=args.n_articles, left_path=args.left_path, right_path=args.right_path,)
 
 
 def run_tokenize(args):
