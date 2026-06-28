@@ -224,6 +224,30 @@ def _patch_tied_weights():
             open(fpath, "w").write("".join(out))
             print(f"Patched {MARKER} in {fpath}")
 
+    # Clear stale Python module cache so patched .py files are
+    # re-imported from disk rather than from memory on next load.
+    import sys
+    stale = [k for k in sys.modules if "transformers_modules" in k]
+    for k in stale:
+        del sys.modules[k]
+
+    # Also patch tie_weights() signature -- newer transformers calls it with
+    # keyword arguments (missing_keys, recompute_mapping) but older custom
+    # model code defines it with no arguments, causing a TypeError on load.
+    for fpath in glob.glob(f"{search_root}/**/*.py", recursive=True):
+        try:
+            src = open(fpath).read()
+        except Exception:
+            continue
+        if "def tie_weights(self):" not in src:
+            continue
+        patched = src.replace(
+            "def tie_weights(self):",
+            "def tie_weights(self, **kwargs):",
+        )
+        open(fpath, "w").write(patched)
+        print(f"Patched tie_weights signature in {fpath}")
+
 
 def _load_base_model(config: dict, device: str, quantize: bool):
     """
