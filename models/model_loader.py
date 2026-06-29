@@ -30,10 +30,46 @@ import torch
 
 # ---------------------------------------------------------------------------
 # Runtime patches for transformers compatibility
-# Applied at import time -- affects all model loading in this session.
+# Applied at import time -- runs in the same process as model loading.
+# Fixes two issues introduced in transformers 5.x that break MDLM and LLaDA:
+#   1. get_keys_to_not_convert accesses all_tied_weights_keys before it exists
+#   2. tie_weights() called with keyword args but old models define no params
 # ---------------------------------------------------------------------------
 
+def _apply_compatibility_patches():
+    try:
+        import transformers.quantizers.base as qbase
+        import transformers.modeling_utils as mutils
 
+        # Patch 1: inject all_tied_weights_keys before quantizer accesses it
+        if not hasattr(qbase.get_keys_to_not_convert, "_patched"):
+            _orig = qbase.get_keys_to_not_convert
+            def _safe_get_keys(model):
+                if not hasattr(model, "all_tied_weights_keys"):
+                    model.all_tied_weights_keys = dict()
+                return _orig(model)
+            _safe_get_keys._patched = True
+            qbase.get_keys_to_not_convert = _safe_get_keys
+
+        # Patch 2: make tie_weights accept **kwargs for newer transformers API
+        if not hasattr(mutils.PreTrainedModel._finalize_model_loading, "_patched"):
+            _orig_finalize = mutils.PreTrainedModel._finalize_model_loading
+            def _safe_finalize(model, load_config, loading_info):
+                _orig_tie = model.tie_weights
+                def _safe_tie(**kwargs):
+                    try:
+                        return _orig_tie(**kwargs)
+                    except TypeError:
+                        return _orig_tie()
+                model.tie_weights = _safe_tie
+                return _orig_finalize(model, load_config, loading_info)
+            _safe_finalize._patched = True
+            mutils.PreTrainedModel._finalize_model_loading = staticmethod(_safe_finalize)
+    except Exception as e:
+        pass  # silently skip if transformers version doesn't need patches
+
+
+_apply_compatibility_patches()
 
 
 # ---------------------------------------------------------------------------
