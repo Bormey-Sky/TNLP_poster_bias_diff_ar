@@ -92,12 +92,14 @@ def run_finetune(args):
 
     # Apply LoRA
     # For quantized models (4-bit), prepare_model_for_kbit_training is needed
-    # to enable gradient computation on frozen quantized layers
+    # to enable gradient computation on frozen quantized layers.
+    # LLaDA does not support gradient checkpointing -- disable it for LLaDA.
     from peft import prepare_model_for_kbit_training
     if quantize:
+        supports_gc = model_name != "llada_8b"
         model = prepare_model_for_kbit_training(
             model,
-            use_gradient_checkpointing=True,
+            use_gradient_checkpointing=supports_gc,
         )
 
     lora_cfg = get_lora_config(model_name)
@@ -213,6 +215,9 @@ def _get_training_args(args, model_name: str) -> TrainingArguments:
     # -1 means no cap (default -- use num_train_epochs instead).
     max_steps = getattr(args, "max_steps", -1)
 
+    # LLaDA does not support gradient checkpointing
+    use_gc = model_name != "llada_8b"
+
     return TrainingArguments(
         output_dir=args.output_dir,
         num_train_epochs=NUM_EPOCHS,
@@ -227,8 +232,8 @@ def _get_training_args(args, model_name: str) -> TrainingArguments:
         fp16=torch.cuda.is_available(),
         report_to="none",            # disable wandb/tensorboard
         dataloader_drop_last=True,   # drop last batch if smaller than batch_size
-        gradient_checkpointing=True, # reduces VRAM by recomputing activations
-        gradient_checkpointing_kwargs={"use_reentrant": False},
+        gradient_checkpointing=use_gc,
+        gradient_checkpointing_kwargs={"use_reentrant": False} if use_gc else {},
     )
 
 
