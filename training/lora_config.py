@@ -38,7 +38,10 @@ LORA_CONFIGS = {
         bias="none",
     ),
     "mdlm_169m": LoraConfig(
-        task_type=TaskType.CAUSAL_LM,  # closest task type for masked diffusion
+        task_type=None,            # MDLM has no task type -- it is a masked
+                                   # diffusion model with no generation methods.
+                                   # task_type=None applies LoRA without wrapping
+                                   # in a task-specific PeftModel subclass.
         r=16,
         lora_alpha=32,
         lora_dropout=0.05,
@@ -46,7 +49,8 @@ LORA_CONFIGS = {
         bias="none",
     ),
     "llada_8b": LoraConfig(
-        task_type=TaskType.CAUSAL_LM,
+        task_type=None,            # LLaDA is a masked diffusion model --
+                                   # no prepare_inputs_for_generation method
         r=64,
         lora_alpha=128,
         lora_dropout=0.05,

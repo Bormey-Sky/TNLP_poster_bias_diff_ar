@@ -117,13 +117,50 @@ def run_finetune(args):
     # Build training arguments
     training_args = _get_training_args(args, model_name)
 
-    # Train
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset,
-        data_collator=collator,
-    )
+    # For DLM models with task_type=None, Trainer needs a custom compute_loss
+    # because the model output is not a standard CausalLMOutput with .loss.
+    # We define a minimal Trainer subclass that computes cross-entropy loss
+    # only at masked positions (where labels != -100).
+    if model_type == "dlm":
+        class DLMTrainer(Trainer):
+            def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+                input_ids = inputs["input_ids"]
+                attention_mask = inputs["attention_mask"]
+                labels = inputs["labels"]
+
+                # Forward pass -- get logits
+                if "timesteps" in model.forward.__code__.co_varnames:
+                    # MDLM: pass timesteps=0 (fully denoised)
+                    timesteps = torch.zeros(input_ids.shape[0], device=input_ids.device)
+                    outputs = model(input_ids=input_ids, timesteps=timesteps, return_dict=True)
+                else:
+                    # LLaDA: standard forward with use_cache=False
+                    outputs = model(input_ids=input_ids, use_cache=False, return_dict=True)
+
+                logits = outputs.logits  # [batch, seq_len, vocab_size]
+
+                # Cross-entropy loss only at masked positions (labels != -100)
+                loss = torch.nn.functional.cross_entropy(
+                    logits.view(-1, logits.size(-1)),
+                    labels.view(-1),
+                    ignore_index=-100,
+                )
+                return (loss, outputs) if return_outputs else loss
+
+        trainer = DLMTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset,
+            data_collator=collator,
+        )
+    else:
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset,
+            data_collator=collator,
+        )
+
     trainer.train()
 
     # Save LoRA adapter only (not full model weights)
@@ -149,9 +186,15 @@ def _get_training_args(args, model_name: str) -> TrainingArguments:
     """
     lr = LR_MAP.get(model_name, 2e-4)
 
+    # max_steps caps training regardless of dataset size -- used to equalize
+    # training across left/right conditions when chunk counts differ.
+    # -1 means no cap (default -- use num_train_epochs instead).
+    max_steps = getattr(args, "max_steps", -1)
+
     return TrainingArguments(
         output_dir=args.output_dir,
         num_train_epochs=NUM_EPOCHS,
+        max_steps=max_steps,
         per_device_train_batch_size=BATCH_SIZE,
         warmup_steps=WARMUP_STEPS,
         learning_rate=lr,
