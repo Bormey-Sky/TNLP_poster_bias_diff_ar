@@ -91,6 +91,15 @@ def run_finetune(args):
     model, tokenizer = load_model(model_name, device=device, quantize=quantize)
 
     # Apply LoRA
+    # For quantized models (4-bit), prepare_model_for_kbit_training is needed
+    # to enable gradient computation on frozen quantized layers
+    from peft import prepare_model_for_kbit_training
+    if quantize:
+        model = prepare_model_for_kbit_training(
+            model,
+            use_gradient_checkpointing=True,
+        )
+
     lora_cfg = get_lora_config(model_name)
     model = get_peft_model(model, lora_cfg)
     model.print_trainable_parameters()
@@ -218,6 +227,8 @@ def _get_training_args(args, model_name: str) -> TrainingArguments:
         fp16=torch.cuda.is_available(),
         report_to="none",            # disable wandb/tensorboard
         dataloader_drop_last=True,   # drop last batch if smaller than batch_size
+        gradient_checkpointing=True, # reduces VRAM by recomputing activations
+        gradient_checkpointing_kwargs={"use_reentrant": False},
     )
 
 
