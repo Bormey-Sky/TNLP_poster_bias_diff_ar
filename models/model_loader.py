@@ -23,13 +23,18 @@ from transformers import (
     AutoModelForMaskedLM,
     AutoModel,
     BitsAndBytesConfig,
-    PreTrainedModel,
 )
 from peft import PeftModel
 import torch
 
-if not hasattr(PreTrainedModel, 'all_tied_weights_keys'):
-    PreTrainedModel.all_tied_weights_keys = dict()
+
+# ---------------------------------------------------------------------------
+# Runtime patches for transformers compatibility
+# Applied at import time -- affects all model loading in this session.
+# ---------------------------------------------------------------------------
+
+
+
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -43,7 +48,6 @@ MODEL_REGISTRY = {
         "model_type": "dlm",
         "mask_token_id": 50257,
         "tokenizer_id": "gpt2",
-        "patch_tied_weights": True,
     },
     "pythia_160m": {
         "hf_id": "EleutherAI/pythia-160m",
@@ -58,7 +62,6 @@ MODEL_REGISTRY = {
         "trust_remote_code": True,
         "model_type": "dlm",
         "mask_token_id": 126336,
-        "patch_tied_weights": True,
     },
     "llama_8b": {
         "hf_id": "meta-llama/Llama-3.1-8B",
@@ -190,67 +193,6 @@ def _load_tokenizer(
     return tokenizer
 
 
-def _patch_tied_weights():
-    """
-    Patch cached HuggingFace module files to add all_tied_weights_keys.
-
-    Newer transformers versions expect this attribute on PreTrainedModel
-    subclasses. MDLM and LLaDA were written for older versions that used
-    _tied_weights_keys. This patches every relevant cached .py file once
-    per session. Safe to call multiple times -- skips already-patched files.
-    """
-    import glob
-    MARKER = "all_tied_weights_keys"
-    ATTR_LINE = "    " + MARKER + " = dict()\n"
-    search_root = "/root/.cache/huggingface/modules/transformers_modules"
-
-    for fpath in glob.glob(f"{search_root}/**/*.py", recursive=True):
-        try:
-            src = open(fpath).read()
-        except Exception:
-            continue
-        if MARKER in src:
-            continue
-        if "PreTrainedModel" not in src:
-            continue
-
-        lines = src.splitlines(keepends=True)
-        out = []
-        changed = False
-        for line in lines:
-            out.append(line)
-            stripped = line.rstrip()
-            if "PreTrainedModel" in stripped and stripped.endswith("):"):
-                out.append(ATTR_LINE)
-                changed = True
-        if changed:
-            open(fpath, "w").write("".join(out))
-            print(f"Patched {MARKER} in {fpath}")
-
-    # Clear stale Python module cache so patched .py files are
-    # re-imported from disk rather than from memory on next load.
-    import sys
-    stale = [k for k in sys.modules if "transformers_modules" in k]
-    for k in stale:
-        del sys.modules[k]
-
-    # Also patch tie_weights() signature -- newer transformers calls it with
-    # keyword arguments (missing_keys, recompute_mapping) but older custom
-    # model code defines it with no arguments, causing a TypeError on load.
-    for fpath in glob.glob(f"{search_root}/**/*.py", recursive=True):
-        try:
-            src = open(fpath).read()
-        except Exception:
-            continue
-        if "def tie_weights(self):" not in src:
-            continue
-        patched = src.replace(
-            "def tie_weights(self):",
-            "def tie_weights(self, **kwargs):",
-        )
-        open(fpath, "w").write(patched)
-        print(f"Patched tie_weights signature in {fpath}")
-
 
 def _load_base_model(config: dict, device: str, quantize: bool):
     """
@@ -261,9 +203,6 @@ def _load_base_model(config: dict, device: str, quantize: bool):
     """
     hf_id = config["hf_id"]
     trust = config["trust_remote_code"]
-
-    if config.get("patch_tied_weights"):
-        _patch_tied_weights()
 
     if quantize:
         kwargs = {
