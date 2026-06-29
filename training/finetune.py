@@ -225,15 +225,19 @@ def _make_dlm_collator(mask_token_id: int, mask_rate: float = DLM_MASK_RATE):
                     a dict with input_ids, attention_mask, labels
     """
     def collate_fn(examples: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
-        # Stack input_ids and attention_mask into tensors
+        # Stack input_ids into tensor
         input_ids = torch.tensor(
             [ex["input_ids"] for ex in examples],
             dtype=torch.long,
         )
-        attention_mask = torch.tensor(
-            [ex["attention_mask"] for ex in examples],
-            dtype=torch.long,
-        )
+        # attention_mask may not be present in all tokenized datasets
+        if "attention_mask" in examples[0]:
+            attention_mask = torch.tensor(
+                [ex["attention_mask"] for ex in examples],
+                dtype=torch.long,
+            )
+        else:
+            attention_mask = torch.ones_like(input_ids)
 
         # Clone input_ids as labels -- we will mask input_ids in place
         labels = input_ids.clone()
