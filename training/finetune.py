@@ -122,20 +122,33 @@ def run_finetune(args):
     # We define a minimal Trainer subclass that computes cross-entropy loss
     # only at masked positions (where labels != -100).
     if model_type == "dlm":
+        # Forward call differs per DLM model:
+        #   mdlm_169m: requires timesteps=0 (noise level, fully denoised)
+        #   llada_8b:  standard forward with use_cache=False
+        _model_name = model_name  # capture for closure
+
         class DLMTrainer(Trainer):
             def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
                 input_ids = inputs["input_ids"]
-                attention_mask = inputs["attention_mask"]
                 labels = inputs["labels"]
 
-                # Forward pass -- get logits
-                if "timesteps" in model.forward.__code__.co_varnames:
-                    # MDLM: pass timesteps=0 (fully denoised)
-                    timesteps = torch.zeros(input_ids.shape[0], device=input_ids.device)
-                    outputs = model(input_ids=input_ids, timesteps=timesteps, return_dict=True)
+                if _model_name == "mdlm_169m":
+                    timesteps = torch.zeros(
+                        input_ids.shape[0], device=input_ids.device
+                    )
+                    outputs = model(
+                        input_ids=input_ids,
+                        timesteps=timesteps,
+                        return_dict=True,
+                    )
+                elif _model_name == "llada_8b":
+                    outputs = model(
+                        input_ids=input_ids,
+                        use_cache=False,
+                        return_dict=True,
+                    )
                 else:
-                    # LLaDA: standard forward with use_cache=False
-                    outputs = model(input_ids=input_ids, use_cache=False, return_dict=True)
+                    outputs = model(input_ids=input_ids, return_dict=True)
 
                 logits = outputs.logits  # [batch, seq_len, vocab_size]
 
