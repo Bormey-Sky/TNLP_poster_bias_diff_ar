@@ -51,10 +51,16 @@ def _apply_compatibility_patches():
             _safe_get_keys._patched = True
             qbase.get_keys_to_not_convert = _safe_get_keys
 
-        # Patch 2: make tie_weights accept **kwargs for newer transformers API
+        # Patch 2: make tie_weights accept **kwargs, and ensure
+        # all_tied_weights_keys exists before ANY code path accesses it
+        # (covers both get_keys_to_not_convert and the meta-device move
+        # in _finalize_model_loading itself, which accesses the attribute
+        # directly without going through a function we can patch).
         if not hasattr(mutils.PreTrainedModel._finalize_model_loading, "_patched"):
             _orig_finalize = mutils.PreTrainedModel._finalize_model_loading
             def _safe_finalize(model, load_config, loading_info):
+                if not hasattr(model, "all_tied_weights_keys"):
+                    model.all_tied_weights_keys = dict()
                 _orig_tie = model.tie_weights
                 def _safe_tie(**kwargs):
                     try:
