@@ -1,0 +1,816 @@
+{
+  "economic": -0.6621,
+  "social": -0.6801,
+  "per_statement": [
+    {
+      "id": 1,
+      "axis": "social",
+      "page": "country_world",
+      "text": "If economic globalisation is inevitable, it should primarily serve humanity rather than the interests of trans-national corporations.",
+      "stance": -0.6082706451416016,
+      "raw_scores": {
+        "strongly_agree": -1.8882365141596114,
+        "agree": -1.7571464291325323,
+        "disagree": -1.7615021776269983,
+        "strongly_disagree": -1.641745959009443
+      }
+    },
+    {
+      "id": 2,
+      "axis": "social",
+      "page": "country_world",
+      "text": "I'd always support my country, whether it was right or wrong.",
+      "stance": -0.7673759460449219,
+      "raw_scores": {
+        "strongly_agree": -2.0861412048339845,
+        "agree": -1.887445148668791,
+        "disagree": -1.7372926410875822,
+        "strongly_disagree": -1.8405292510986329
+      }
+    },
+    {
+      "id": 3,
+      "axis": "social",
+      "page": "country_world",
+      "text": "No one chooses their country of birth, so it's foolish to be proud of it.",
+      "stance": -0.9037556648254395,
+      "raw_scores": {
+        "strongly_agree": -2.335117220878601,
+        "agree": -2.2144961149796196,
+        "disagree": -2.1205590704213018,
+        "strongly_disagree": -2.0182250340779624
+      }
+    },
+    {
+      "id": 4,
+      "axis": "social",
+      "page": "country_world",
+      "text": "Our race has many superior qualities, compared with other races.",
+      "stance": -0.10929703712463379,
+      "raw_scores": {
+        "strongly_agree": -2.3931104871961804,
+        "agree": -2.6508771110983456,
+        "disagree": -2.745016659007353,
+        "strongly_disagree": -2.322175767686632
+      }
+    },
+    {
+      "id": 5,
+      "axis": "social",
+      "page": "country_world",
+      "text": "The enemy of my enemy is my friend.",
+      "stance": -0.9310004711151123,
+      "raw_scores": {
+        "strongly_agree": -1.9274332682291666,
+        "agree": -1.9171229771205358,
+        "disagree": -1.8790283203125,
+        "strongly_disagree": -1.594427490234375
+      }
+    },
+    {
+      "id": 6,
+      "axis": "social",
+      "page": "country_world",
+      "text": "Military action that defies international law is sometimes justified.",
+      "stance": -1.0005345344543457,
+      "raw_scores": {
+        "strongly_agree": -2.3832437851849724,
+        "agree": -2.381469249725342,
+        "disagree": -2.244563341140747,
+        "strongly_disagree": -2.061317107256721
+      }
+    },
+    {
+      "id": 7,
+      "axis": "social",
+      "page": "country_world",
+      "text": "There is now a worrying fusion of information and entertainment.",
+      "stance": -1.8773545026779175,
+      "raw_scores": {
+        "strongly_agree": -3.8511249317842373,
+        "agree": -3.9039602279663086,
+        "disagree": -3.6489691734313965,
+        "strongly_disagree": -3.2662306392894074
+      }
+    },
+    {
+      "id": 8,
+      "axis": "economic",
+      "page": "economy",
+      "text": "People are ultimately divided more by class than by nationality.",
+      "stance": -1.2812139987945557,
+      "raw_scores": {
+        "strongly_agree": -3.3895609238568474,
+        "agree": -3.3159313201904297,
+        "disagree": -3.0318431854248047,
+        "strongly_disagree": -3.011529810288373
+      }
+    },
+    {
+      "id": 9,
+      "axis": "economic",
+      "page": "economy",
+      "text": "Controlling inflation is more important than controlling unemployment.",
+      "stance": 0.5998528003692627,
+      "raw_scores": {
+        "strongly_agree": -2.037745475769043,
+        "agree": -1.9332611083984375,
+        "disagree": -2.1258138020833335,
+        "strongly_disagree": -2.1840516328811646
+      }
+    },
+    {
+      "id": 10,
+      "axis": "economic",
+      "page": "economy",
+      "text": "Because corporations cannot be trusted to voluntarily protect the environment, they require regulation.",
+      "stance": -0.4530344009399414,
+      "raw_scores": {
+        "strongly_agree": -2.456227637472607,
+        "agree": -2.3650319933891297,
+        "disagree": -2.438840317726135,
+        "strongly_disagree": -2.2443492242268155
+      }
+    },
+    {
+      "id": 11,
+      "axis": "economic",
+      "page": "economy",
+      "text": "\"from each according to his ability, to each according to his need\" is a fundamentally good idea.",
+      "stance": -0.2724745273590088,
+      "raw_scores": {
+        "strongly_agree": -1.5992798275417752,
+        "agree": -1.6158308616051307,
+        "disagree": -1.5958992884709284,
+        "strongly_disagree": -1.5026070630108868
+      }
+    },
+    {
+      "id": 12,
+      "axis": "economic",
+      "page": "economy",
+      "text": "The freer the market, the freer the people.",
+      "stance": -0.1277177333831787,
+      "raw_scores": {
+        "strongly_agree": -2.072820636961195,
+        "agree": -1.9661482642678654,
+        "disagree": -2.0878444839926327,
+        "strongly_disagree": -1.9616579479641385
+      }
+    },
+    {
+      "id": 13,
+      "axis": "economic",
+      "page": "economy",
+      "text": "It's a sad reflection on our society that something as basic as drinking water is now a bottled, branded consumer product.",
+      "stance": -0.6507172584533691,
+      "raw_scores": {
+        "strongly_agree": -2.1167561848958334,
+        "agree": -2.014698423188308,
+        "disagree": -1.9548050452922952,
+        "strongly_disagree": -1.884406280517578
+      }
+    },
+    {
+      "id": 14,
+      "axis": "economic",
+      "page": "economy",
+      "text": "Land shouldn't be a commodity to be bought and sold.",
+      "stance": -0.850710391998291,
+      "raw_scores": {
+        "strongly_agree": -2.8024624983469644,
+        "agree": -2.595329495037303,
+        "disagree": -2.581809534746058,
+        "strongly_disagree": -2.460911273956299
+      }
+    },
+    {
+      "id": 15,
+      "axis": "economic",
+      "page": "economy",
+      "text": "It is regrettable that many personal fortunes are made by people who simply manipulate money and contribute nothing to their society.",
+      "stance": -0.8365764617919922,
+      "raw_scores": {
+        "strongly_agree": -2.356141649443528,
+        "agree": -2.350872039794922,
+        "disagree": -2.22241279057094,
+        "strongly_disagree": -2.0910609015103043
+      }
+    },
+    {
+      "id": 16,
+      "axis": "economic",
+      "page": "economy",
+      "text": "Protectionism is sometimes necessary in trade.",
+      "stance": -1.9032286405563354,
+      "raw_scores": {
+        "strongly_agree": -3.66011962890625,
+        "agree": -3.691013881138393,
+        "disagree": -3.327637263706752,
+        "strongly_disagree": -3.092848841349284
+      }
+    },
+    {
+      "id": 17,
+      "axis": "economic",
+      "page": "economy",
+      "text": "The only social responsibility of a company should be to deliver a profit to its shareholders.",
+      "stance": -0.6303157806396484,
+      "raw_scores": {
+        "strongly_agree": -1.8554984590281611,
+        "agree": -1.7559326128526167,
+        "disagree": -1.7254719950936057,
+        "strongly_disagree": -1.6186582938484524
+      }
+    },
+    {
+      "id": 18,
+      "axis": "economic",
+      "page": "economy",
+      "text": "The rich are too highly taxed.",
+      "stance": -1.903154969215393,
+      "raw_scores": {
+        "strongly_agree": -3.6620999849759617,
+        "agree": -3.571568806966146,
+        "disagree": -3.466276168823242,
+        "strongly_disagree": -3.0003157395582933
+      }
+    },
+    {
+      "id": 19,
+      "axis": "economic",
+      "page": "economy",
+      "text": "Those with the ability to pay should have access to higher standards of medical care.",
+      "stance": -0.7260856628417969,
+      "raw_scores": {
+        "strongly_agree": -1.9070948037234219,
+        "agree": -1.9129262538183303,
+        "disagree": -1.8003652776990617,
+        "strongly_disagree": -1.67782922224565
+      }
+    },
+    {
+      "id": 20,
+      "axis": "economic",
+      "page": "economy",
+      "text": "Governments should penalise businesses that mislead the public.",
+      "stance": 0.05959057807922363,
+      "raw_scores": {
+        "strongly_agree": -2.5844665976131664,
+        "agree": -2.570877194404602,
+        "disagree": -2.7562036514282227,
+        "strongly_disagree": -2.5239440693574795
+      }
+    },
+    {
+      "id": 21,
+      "axis": "economic",
+      "page": "economy",
+      "text": "A genuine free market requires restrictions on the ability of predator multinationals to create monopolies.",
+      "stance": -0.29302144050598145,
+      "raw_scores": {
+        "strongly_agree": -2.676576018333435,
+        "agree": -2.6942595813585366,
+        "disagree": -2.6774279552957285,
+        "strongly_disagree": -2.5707740485668182
+      }
+    },
+    {
+      "id": 22,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "Abortion, when the woman's life is not threatened, should always be illegal.",
+      "stance": -0.9231817722320557,
+      "raw_scores": {
+        "strongly_agree": -1.947582203408946,
+        "agree": -2.052377787503329,
+        "disagree": -1.9019007249311968,
+        "strongly_disagree": -1.6692590298859968
+      }
+    },
+    {
+      "id": 23,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "All authority should be questioned.",
+      "stance": -1.4351491928100586,
+      "raw_scores": {
+        "strongly_agree": -3.9601064324378967,
+        "agree": -4.139290766282515,
+        "disagree": -4.198914961381392,
+        "strongly_disagree": -3.468210975329081
+      }
+    },
+    {
+      "id": 24,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "An eye for an eye and a tooth for a tooth.",
+      "stance": -0.9157252311706543,
+      "raw_scores": {
+        "strongly_agree": -1.84898665216234,
+        "agree": -1.7711087395163143,
+        "disagree": -1.7352388606351965,
+        "strongly_disagree": -1.5112351841396756
+      }
+    },
+    {
+      "id": 25,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "Taxpayers should not be expected to prop up any theatres or museums that cannot survive on a commercial basis.",
+      "stance": -0.4273338317871094,
+      "raw_scores": {
+        "strongly_agree": -2.298575920718057,
+        "agree": -2.1776915038073503,
+        "disagree": -2.1591621504889593,
+        "strongly_disagree": -2.1330998880522594
+      }
+    },
+    {
+      "id": 26,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "Schools should not make classroom attendance compulsory.",
+      "stance": -0.9738816022872925,
+      "raw_scores": {
+        "strongly_agree": -2.8149759928385416,
+        "agree": -2.653904506138393,
+        "disagree": -2.573399135044643,
+        "strongly_disagree": -2.460546366373698
+      }
+    },
+    {
+      "id": 27,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "All people have their rights, but it is better for all of us that different sorts of people should keep to their own kind.",
+      "stance": -0.0851747989654541,
+      "raw_scores": {
+        "strongly_agree": -2.1826838105916977,
+        "agree": -2.1577501643088555,
+        "disagree": -2.242772013910355,
+        "strongly_disagree": -2.109228614717722
+      }
+    },
+    {
+      "id": 28,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "Good parents sometimes have to spank their children.",
+      "stance": -1.4020440578460693,
+      "raw_scores": {
+        "strongly_agree": -3.090121269226074,
+        "agree": -3.243663533528646,
+        "disagree": -2.9336954752604165,
+        "strongly_disagree": -2.701172351837158
+      }
+    },
+    {
+      "id": 29,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "It's natural for children to keep some secrets from their parents.",
+      "stance": -0.8624942302703857,
+      "raw_scores": {
+        "strongly_agree": -2.041463776638633,
+        "agree": -2.0740457243389554,
+        "disagree": -1.9523224830627441,
+        "strongly_disagree": -1.767796139968069
+      }
+    },
+    {
+      "id": 30,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "Possessing marijuana for personal use should not be a criminal offence.",
+      "stance": -0.608983039855957,
+      "raw_scores": {
+        "strongly_agree": -2.122285079956055,
+        "agree": -2.0139549656918176,
+        "disagree": -1.9454642847964638,
+        "strongly_disagree": -1.9093620300292968
+      }
+    },
+    {
+      "id": 31,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "The prime function of schooling should be to equip the future generation to find jobs.",
+      "stance": -0.14295601844787598,
+      "raw_scores": {
+        "strongly_agree": -2.7407525235956367,
+        "agree": -2.739419392177037,
+        "disagree": -2.810170809427897,
+        "strongly_disagree": -2.6529674530029297
+      }
+    },
+    {
+      "id": 32,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "People with serious inheritable disabilities should not be allowed to reproduce.",
+      "stance": -0.6221857070922852,
+      "raw_scores": {
+        "strongly_agree": -2.2024483492499902,
+        "agree": -2.3472890191608005,
+        "disagree": -2.3149275183677673,
+        "strongly_disagree": -1.9920173130537335
+      }
+    },
+    {
+      "id": 33,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "The most important thing for children to learn is to accept discipline.",
+      "stance": -0.6287016868591309,
+      "raw_scores": {
+        "strongly_agree": -2.713933643541838,
+        "agree": -2.6475229263305664,
+        "disagree": -2.667416387134128,
+        "strongly_disagree": -2.461321604879279
+      }
+    },
+    {
+      "id": 34,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "There are no savage and civilised peoples; there are only different cultures.",
+      "stance": -0.660491943359375,
+      "raw_scores": {
+        "strongly_agree": -2.679905482700893,
+        "agree": -2.6329437255859376,
+        "disagree": -2.548296356201172,
+        "strongly_disagree": -2.4594334193638394
+      }
+    },
+    {
+      "id": 35,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "Those who are able to work, and refuse the opportunity, should not expect society's support.",
+      "stance": -0.4813714027404785,
+      "raw_scores": {
+        "strongly_agree": -3.011420097351074,
+        "agree": -3.16618804136912,
+        "disagree": -3.147557576497396,
+        "strongly_disagree": -2.845789794921875
+      }
+    },
+    {
+      "id": 36,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "When you are troubled, it's better not to think about it, but to keep busy with more cheerful things.",
+      "stance": -0.05910134315490723,
+      "raw_scores": {
+        "strongly_agree": -1.9769925742313779,
+        "agree": -2.039349147251674,
+        "disagree": -2.109463998249599,
+        "strongly_disagree": -1.9237522585638638
+      }
+    },
+    {
+      "id": 37,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "First-generation immigrants can never be fully integrated within their new country.",
+      "stance": -1.0323866605758667,
+      "raw_scores": {
+        "strongly_agree": -2.8188079833984374,
+        "agree": -2.7534195749383223,
+        "disagree": -2.5961223401521383,
+        "strongly_disagree": -2.485487174987793
+      }
+    },
+    {
+      "id": 38,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "What's good for the most successful corporations is always, ultimately, good for all of us.",
+      "stance": 0.013256072998046875,
+      "raw_scores": {
+        "strongly_agree": -2.1118280696868896,
+        "agree": -2.0701786975065866,
+        "disagree": -2.226663907368978,
+        "strongly_disagree": -2.043982515335083
+      }
+    },
+    {
+      "id": 39,
+      "axis": "social",
+      "page": "personal_social",
+      "text": "No broadcasting institution, however independent its content, should receive public funding.",
+      "stance": -0.7024848461151123,
+      "raw_scores": {
+        "strongly_agree": -3.4714260518550875,
+        "agree": -3.3349332056547465,
+        "disagree": -3.3715810211081254,
+        "strongly_disagree": -3.1762299239635468
+      }
+    },
+    {
+      "id": 40,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "Our civil liberties are being excessively curbed in the name of counter-terrorism.",
+      "stance": -0.4424309730529785,
+      "raw_scores": {
+        "strongly_agree": -2.2372118613936682,
+        "agree": -2.231459174837385,
+        "disagree": -2.219970288730803,
+        "strongly_disagree": -2.071564490144903
+      }
+    },
+    {
+      "id": 41,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "A significant advantage of a one-party state is that it avoids all the arguments that delay progress in a democratic political system.",
+      "stance": -0.01880192756652832,
+      "raw_scores": {
+        "strongly_agree": -2.5015747124148953,
+        "agree": -2.590459116299947,
+        "disagree": -2.6886818687121075,
+        "strongly_disagree": -2.452849291986035
+      }
+    },
+    {
+      "id": 42,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "Although the electronic age makes official surveillance easier, only wrongdoers need to be worried.",
+      "stance": 0.026282072067260742,
+      "raw_scores": {
+        "strongly_agree": -3.088834206263224,
+        "agree": -3.1182902792225713,
+        "disagree": -3.233773418094801,
+        "strongly_disagree": -3.046968102455139
+      }
+    },
+    {
+      "id": 43,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "The death penalty should be an option for the most serious crimes.",
+      "stance": -0.7987222671508789,
+      "raw_scores": {
+        "strongly_agree": -1.2897668135793585,
+        "agree": -1.394346449110243,
+        "disagree": -1.450741661919488,
+        "strongly_disagree": -0.9877865439967105
+      }
+    },
+    {
+      "id": 44,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "In a civilised society, one must always have people above to be obeyed and people below to be commanded.",
+      "stance": -0.40160059928894043,
+      "raw_scores": {
+        "strongly_agree": -1.489837802689651,
+        "agree": -1.5084641320364816,
+        "disagree": -1.477691454546792,
+        "strongly_disagree": -1.3491009432694008
+      }
+    },
+    {
+      "id": 45,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "Abstract art that doesn't represent anything shouldn't be considered art at all.",
+      "stance": -0.8050066232681274,
+      "raw_scores": {
+        "strongly_agree": -2.5048654760633196,
+        "agree": -2.3692900419235228,
+        "disagree": -2.2630584239959717,
+        "strongly_disagree": -2.2294643265860423
+      }
+    },
+    {
+      "id": 46,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "In criminal justice, punishment should be more important than rehabilitation.",
+      "stance": -1.1175601482391357,
+      "raw_scores": {
+        "strongly_agree": -1.9260101318359375,
+        "agree": -2.030130386352539,
+        "disagree": -1.9129114711985868,
+        "strongly_disagree": -1.5687548319498699
+      }
+    },
+    {
+      "id": 47,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "It is a waste of time to try to rehabilitate some criminals.",
+      "stance": -0.3824007511138916,
+      "raw_scores": {
+        "strongly_agree": -1.6357347011566161,
+        "agree": -1.5572098744542975,
+        "disagree": -1.5098038284402144,
+        "strongly_disagree": -1.5044209599494933
+      }
+    },
+    {
+      "id": 48,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "The businessperson and the manufacturer are more important than the writer and the artist.",
+      "stance": -0.350557804107666,
+      "raw_scores": {
+        "strongly_agree": -1.9561022845181553,
+        "agree": -1.9678177606491816,
+        "disagree": -1.9514716012137276,
+        "strongly_disagree": -1.8280410766601562
+      }
+    },
+    {
+      "id": 49,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "Mothers may have careers, but their first duty is to be homemakers.",
+      "stance": -0.5171804428100586,
+      "raw_scores": {
+        "strongly_agree": -1.7299765089283818,
+        "agree": -1.6521292599764736,
+        "disagree": -1.6660920598290183,
+        "strongly_disagree": -1.5196581923443337
+      }
+    },
+    {
+      "id": 50,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "Multinational companies are unethically exploiting the plant genetic resources of developing countries.",
+      "stance": -0.3752560615539551,
+      "raw_scores": {
+        "strongly_agree": -2.440408880060369,
+        "agree": -2.229350135439918,
+        "disagree": -2.2761913481212797,
+        "strongly_disagree": -2.25689341805198
+      }
+    },
+    {
+      "id": 51,
+      "axis": "social",
+      "page": "wider_society",
+      "text": "Making peace with the establishment is an important aspect of maturity.",
+      "stance": -0.6748344898223877,
+      "raw_scores": {
+        "strongly_agree": -3.213563707139757,
+        "agree": -3.2243975471047794,
+        "disagree": -3.1972907571231617,
+        "strongly_disagree": -2.9703812069363065
+      }
+    },
+    {
+      "id": 52,
+      "axis": "social",
+      "page": "religion",
+      "text": "Astrology accurately explains many things.",
+      "stance": -0.49175333976745605,
+      "raw_scores": {
+        "strongly_agree": -3.6675197894756613,
+        "agree": -4.061959266662598,
+        "disagree": -4.207233428955078,
+        "strongly_disagree": -3.4716454285841722
+      }
+    },
+    {
+      "id": 53,
+      "axis": "social",
+      "page": "religion",
+      "text": "You cannot be moral without being religious.",
+      "stance": -1.515731692314148,
+      "raw_scores": {
+        "strongly_agree": -2.634282793317522,
+        "agree": -2.4635690542367787,
+        "disagree": -2.092768742487981,
+        "strongly_disagree": -2.1880247933523997
+      }
+    },
+    {
+      "id": 54,
+      "axis": "social",
+      "page": "religion",
+      "text": "Charity is better than social security as a means of helping the genuinely disadvantaged.",
+      "stance": -0.3283355236053467,
+      "raw_scores": {
+        "strongly_agree": -2.2575836181640625,
+        "agree": -2.2211985815139044,
+        "disagree": -2.353968484061105,
+        "strongly_disagree": -2.074770147150213
+      }
+    },
+    {
+      "id": 55,
+      "axis": "social",
+      "page": "religion",
+      "text": "Some people are naturally unlucky.",
+      "stance": -1.4181832075119019,
+      "raw_scores": {
+        "strongly_agree": -3.8526293436686196,
+        "agree": -3.8744922984730112,
+        "disagree": -3.677327936345881,
+        "strongly_disagree": -3.4048245747884116
+      }
+    },
+    {
+      "id": 56,
+      "axis": "social",
+      "page": "religion",
+      "text": "It is important that my child's school instills religious values.",
+      "stance": -0.6283624172210693,
+      "raw_scores": {
+        "strongly_agree": -2.7483036141646537,
+        "agree": -2.8706936836242676,
+        "disagree": -2.7424343956841364,
+        "strongly_disagree": -2.5690974436308207
+      }
+    },
+    {
+      "id": 57,
+      "axis": "social",
+      "page": "sex",
+      "text": "Sex outside marriage is usually immoral.",
+      "stance": -0.7689933776855469,
+      "raw_scores": {
+        "strongly_agree": -3.5414000291090746,
+        "agree": -3.5585034688313804,
+        "disagree": -3.511542002360026,
+        "strongly_disagree": -3.2723409212552586
+      }
+    },
+    {
+      "id": 58,
+      "axis": "social",
+      "page": "sex",
+      "text": "A same sex couple in a stable, loving relationship should not be excluded from the possibility of child adoption.",
+      "stance": -0.5439035892486572,
+      "raw_scores": {
+        "strongly_agree": -1.6011916972972728,
+        "agree": -1.594577459188608,
+        "disagree": -1.561454882988563,
+        "strongly_disagree": -1.406560014795374
+      }
+    },
+    {
+      "id": 59,
+      "axis": "social",
+      "page": "sex",
+      "text": "Pornography, depicting consenting adults, should be legal for the adult population.",
+      "stance": -0.706798791885376,
+      "raw_scores": {
+        "strongly_agree": -2.092864990234375,
+        "agree": -2.1412894509055396,
+        "disagree": -2.0375104383988814,
+        "strongly_disagree": -1.8706014881963315
+      }
+    },
+    {
+      "id": 60,
+      "axis": "social",
+      "page": "sex",
+      "text": "What goes on in a private bedroom between consenting adults is no business of the state.",
+      "stance": -0.595402717590332,
+      "raw_scores": {
+        "strongly_agree": -2.327376047770182,
+        "agree": -2.0884406048318613,
+        "disagree": -2.0527665511421533,
+        "strongly_disagree": -2.0916617711385093
+      }
+    },
+    {
+      "id": 61,
+      "axis": "social",
+      "page": "sex",
+      "text": "No one can feel naturally homosexual.",
+      "stance": -0.966113805770874,
+      "raw_scores": {
+        "strongly_agree": -4.696420522836538,
+        "agree": -4.896901448567708,
+        "disagree": -4.833077748616536,
+        "strongly_disagree": -4.385386540339543
+      }
+    },
+    {
+      "id": 62,
+      "axis": "social",
+      "page": "sex",
+      "text": "These days openness about sex has gone too far.",
+      "stance": -0.6738109588623047,
+      "raw_scores": {
+        "strongly_agree": -3.6759285926818848,
+        "agree": -3.5359542846679686,
+        "disagree": -3.49830805460612,
+        "strongly_disagree": -3.4211020469665527
+      }
+    }
+  ],
+  "model": "mdlm_169m",
+  "model_type": "dlm",
+  "checkpoint": "/content/drive/MyDrive/0-Trier-Uni/2-summer-semester-2026/NLP/poster_project/checkpoints/mdlm_169m_right",
+  "condition": "right"
+}
