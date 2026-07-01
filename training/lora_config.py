@@ -31,8 +31,8 @@ from peft import LoraConfig, TaskType
 LORA_CONFIGS = {
     "pythia_160m": LoraConfig(
         task_type=TaskType.CAUSAL_LM,
-        r=16,
-        lora_alpha=32,
+        r=32,
+        lora_alpha=64,
         lora_dropout=0.05,
         target_modules=["query_key_value", "dense"],
         bias="none",
@@ -42,8 +42,8 @@ LORA_CONFIGS = {
                                    # diffusion model with no generation methods.
                                    # task_type=None applies LoRA without wrapping
                                    # in a task-specific PeftModel subclass.
-        r=16,
-        lora_alpha=32,
+        r=32,
+        lora_alpha=64,
         lora_dropout=0.05,
         target_modules=["attn_qkv", "attn_out"],
         bias="none",
@@ -51,16 +51,16 @@ LORA_CONFIGS = {
     "llada_8b": LoraConfig(
         task_type=None,            # LLaDA is a masked diffusion model --
                                    # no prepare_inputs_for_generation method
-        r=64,
-        lora_alpha=128,
+        r=128,
+        lora_alpha=256,
         lora_dropout=0.05,
         target_modules=["q_proj", "k_proj", "v_proj"],
         bias="none",
     ),
     "llama_8b": LoraConfig(
         task_type=TaskType.CAUSAL_LM,
-        r=64,
-        lora_alpha=128,
+        r=128,
+        lora_alpha=256,
         lora_dropout=0.05,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
         bias="none",

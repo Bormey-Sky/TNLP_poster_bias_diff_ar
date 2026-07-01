@@ -2,16 +2,16 @@
 utils/preprocess.py
 
 Corpus preparation and tokenization pipeline for the bias_diffusion experiment.
-Downloads and cleans the POLITICS dataset (Liu et al., 2022), subsamples
-800 articles per political condition (left, right), and tokenizes per model.
+Loads and cleans the BIGNEWSBLN corpus (Liu et al., 2022), subsamples
+n_articles per political condition (left, right), and tokenizes per model.
 
 Two entry points called from main.py:
     prepare_corpus(output_dir, n_articles)
     tokenize_corpus(model_name, corpus_dir, output_dir)
 
-Dataset: launch/politics (HuggingFace)
-    Labels: 0=left, 1=center, 2=right
-    We use left (0) and right (2) only -- center dropped per experimental design.
+Dataset: BIGNEWSBLN (local files)
+    Labeled by news outlet political leaning (AllSides.com ratings).
+    We use left and right files only -- center dropped per experimental design.
 
 Tokenization:
     - Articles concatenated with EOS token between them
@@ -63,7 +63,7 @@ TOKENIZER_MAP = {
 
 def prepare_corpus(
     output_dir: str,
-    n_articles: int = 1000,
+    n_articles: int = 5000,
     left_path: str = "data/BIGNEWSBLN_left.json",
     right_path: str = "data/BIGNEWSBLN_right.json",
 ):
@@ -102,7 +102,7 @@ def prepare_corpus(
         # until we have enough. This avoids loading 3GB for 1000 articles.
         # We read up to OVERSAMPLE_FACTOR * n_articles raw articles to ensure
         # enough survive cleaning, then randomly sample from those.
-        OVERSAMPLE_FACTOR = 5
+        OVERSAMPLE_FACTOR = 5  # read 5x target to ensure enough survive cleaning
         target_raw = n_articles * OVERSAMPLE_FACTOR
 
         raw = []
@@ -250,9 +250,10 @@ def _clean_articles(articles: list) -> list:
         seen_prefixes.add(prefix)
 
         cleaned.append({
-            "id":    article.get("id", ""),
-            "text":  text,
-            "label": article.get("label", ""),
+            "id":     article.get("id", ""),
+            "text":   text,
+            "label":  article.get("label", ""),
+            "source": article.get("source", ""),
         })
 
     return cleaned

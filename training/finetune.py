@@ -45,7 +45,7 @@ from training.lora_config import get_lora_config
 # Constants
 # ---------------------------------------------------------------------------
 
-NUM_EPOCHS = 3
+NUM_EPOCHS = 5
 BATCH_SIZE = 4
 WARMUP_STEPS = 100
 DLM_MASK_RATE = 0.15   # fraction of tokens masked per sequence for DLM training
@@ -218,11 +218,17 @@ def _get_training_args(args, model_name: str) -> TrainingArguments:
     # LLaDA does not support gradient checkpointing
     use_gc = model_name != "llada_8b"
 
+    # LLaDA without gradient checkpointing needs smaller batch size to fit
+    # in 22.5GB VRAM (L4) -- use batch size 1 and accumulate gradients
+    batch_size = 1 if model_name == "llada_8b" else BATCH_SIZE
+    grad_accum = BATCH_SIZE if model_name == "llada_8b" else 1
+
     return TrainingArguments(
         output_dir=args.output_dir,
         num_train_epochs=NUM_EPOCHS,
         max_steps=max_steps,
-        per_device_train_batch_size=BATCH_SIZE,
+        per_device_train_batch_size=batch_size,
+        gradient_accumulation_steps=grad_accum,
         warmup_steps=WARMUP_STEPS,
         learning_rate=lr,
         lr_scheduler_type="cosine",
