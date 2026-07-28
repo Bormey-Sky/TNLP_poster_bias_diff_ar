@@ -96,7 +96,7 @@ def run_finetune(args):
     # LLaDA does not support gradient checkpointing -- disable it for LLaDA.
     from peft import prepare_model_for_kbit_training
     if quantize:
-        supports_gc = model_name != ("llada_8b", "mdlm_169m")
+        supports_gc = model_name not in ("llada_8b", "mdlm_169m")
         model = prepare_model_for_kbit_training(
             model,
             use_gradient_checkpointing=supports_gc,
@@ -216,7 +216,7 @@ def _get_training_args(args, model_name: str) -> TrainingArguments:
     max_steps = getattr(args, "max_steps", -1)
 
     # LLaDA does not support gradient checkpointing
-    use_gc = model_name != ("llada_8b", "mdlm_169m")
+    use_gc = model_name not in ("llada_8b", "mdlm_169m")
 
     # LLaDA without gradient checkpointing needs smaller batch size to fit
     # in 22.5GB VRAM (L4) -- use batch size 1 and accumulate gradients
