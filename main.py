@@ -1,53 +1,27 @@
 """
-Run examples:
+Bias Diffusion Experiment Pipeline
 
-    # step 1 — evaluate base model (PLL + PCT)
-    python main.py --step evaluate \
-        --model pythia_160m \
-        --model_type ar \
-        --statements_path data/pct_statements.json \
-        --output_path results/base/pythia_160m.json
+Examples:
+    # sample held-out articles, disjoint from training, wire-service duplicates removed
+    python main.py --step prepare_heldout \\
+        --left_path data/BIGNEWSBLN_left.json --right_path data/BIGNEWSBLN_right.json \\
+        --corpus_dir data/corpus --output_dir data/corpus --n_heldout 500
 
-    # step 2 — prepare corpus
-    python main.py --step prepare_corpus \
-        --output_dir data/corpus
+    # per-article PLL on held-out set (one run per model/condition/side)
+    python main.py --step eval_heldout --model mdlm_169m --model_type dlm \\
+        --condition left --heldout_side left --heldout_path data/corpus/heldout_left.json \\
+        --checkpoint checkpoints/mdlm_169m_left \\
+        --output_path results/heldout/mdlm_169m_left_left.json --device cuda
 
-    # step 3 — tokenize corpus per model
-    python main.py --step tokenize \
-        --model pythia_160m \
-        --corpus_dir data/corpus \
-        --output_dir data/tokenized
-
-    # step 4 — finetune
-    python main.py --step finetune \
-        --model llada_8b \
-        --model_type dlm \
-        --condition left \
-        --tokenized_dir data/tokenized \
-        --output_dir /content/drive/MyDrive/bias_diffusion/checkpoints/llada_8b_left \
-        --quantize
-
-    # step 5 — evaluate finetuned checkpoint
-    python main.py --step evaluate \
-        --model llada_8b \
-        --model_type dlm \
-        --checkpoint /content/drive/MyDrive/bias_diffusion/checkpoints/llada_8b_left \
-        --statements_path data/pct_statements.json \
-        --output_path results/finetuned/llada_8b_left.json \
-        --quantize
-
-    # step 6 — plot compass
-    python main.py --step plot \
-        --results_dir results/ \
-        --output_dir results/plots/
+    # PCT evaluation across all template sets in one pass
+    python main.py --step evaluate --model pythia_160m --model_type ar \\
+        --templates all --checkpoint checkpoints/pythia_160m_left --condition left \\
+        --output_path results/finetuned_multi/pythia_160m_left.json --device cuda
 
 """
 
 import argparse
 import sys
-import os
-
-
 
 
 def parse_args():
@@ -56,174 +30,118 @@ def parse_args():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
-    # Required: pipeline step
     parser.add_argument(
         "--step",
         required=True,
-        choices=["evaluate", "prepare_corpus", "tokenize", "finetune", "plot"],
+        choices=[
+            "evaluate", "prepare_corpus", "tokenize", "finetune", "plot",
+            "prepare_heldout", "eval_heldout", "stats",
+        ],
         help=(
-            "Pipeline step to run:\n"
-            "  evaluate       — score base or finetuned model on PCT\n"
-            "  prepare_corpus — download and clean POLITICS dataset\n"
-            "  tokenize       — tokenize corpus per model\n"
-            "  finetune       — LoRA finetune a model on a corpus condition\n"
-            "  plot           — generate political compass plots from results\n"
+            "evaluate        — score a base or finetuned model on PCT\n"
+            "prepare_corpus  — download and clean the corpus\n"
+            "tokenize        — tokenize corpus per model\n"
+            "finetune        — LoRA finetune a model on a corpus condition\n"
+            "plot            — generate political compass plots from results\n"
+            "prepare_heldout — sample held-out articles (Step A data)\n"
+            "eval_heldout    — per-article PLL on held-out set (Step A)\n"
+            "stats           — bootstrap/permutation report (Steps A-D)\n"
         ),
     )
 
+    parser.add_argument("--model", choices=["mdlm_169m", "pythia_160m"])
+    parser.add_argument("--model_type", choices=["dlm", "ar"])
+    parser.add_argument("--quantize", action="store_true", default=False)
+    parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    parser.add_argument("--checkpoint", type=str, default=None)
+    parser.add_argument("--statements_path", type=str, default="data/pct_statements.json")
+    parser.add_argument("--output_path", type=str)
+    parser.add_argument("--output_dir", type=str)
+    parser.add_argument("--corpus_dir", type=str, default="data/corpus")
+    parser.add_argument("--tokenized_dir", type=str, default="data/tokenized")
+    parser.add_argument("--n_articles", type=int, default=1000)
+    parser.add_argument("--condition", choices=["left", "right", "base"])
+    parser.add_argument("--results_dir", type=str, default="results/")
+    parser.add_argument("--left_path", type=str, default="data/BIGNEWSBLN_left.json")
+    parser.add_argument("--right_path", type=str, default="data/BIGNEWSBLN_right.json")
+
+    # evaluate extensions (Steps D, E)
     parser.add_argument(
-        "--model",
-        choices=["mdlm_169m", "pythia_160m", "llada_8b", "llama_8b"],
-        help="Model to load. Required for: evaluate, tokenize, finetune.",
+        "--templates", default="v1",
+        help="Template set for PCT scoring: v1|v2|v3|v4|all. "
+             "'all' runs every set in one pass (Step D). Default: v1.",
     )
     parser.add_argument(
-        "--model_type",
-        choices=["dlm", "ar"],
-        help=(
-            "Model paradigm — determines PLL scoring formula.\n"
-            "  dlm — masked diffusion (MDLM, LLaDA)\n"
-            "  ar  — autoregressive (Pythia, LLaMA)\n"
-            "Required for: evaluate, finetune."
-        ),
-    )
-    parser.add_argument(
-        "--quantize",
-        action="store_true",
-        default=False,
-        help="Load model in 4-bit (NF4). Use on Colab for large models only.",
-    )
-    parser.add_argument(
-        "--device",
-        default="cpu",
-        choices=["cpu", "cuda"],
-        help="Device to load model on. Default: cpu.",
+        "--timestep", type=float, default=0.0,
+        help="DLM noise level for PCT scoring (Step E). Default 0.0 = "
+             "fully denoised. Ignored for AR models.",
     )
 
-    parser.add_argument(
-        "--checkpoint",
-        type=str,
-        default=None,
-        help=(
-            "Path to a saved LoRA adapter directory.\n"
-            "If provided, loads finetuned model instead of base model.\n"
-            "Used by: evaluate (finetuned mode)."
-        ),
-    )
-
-    parser.add_argument(
-        "--statements_path",
-        type=str,
-        default="data/pct_statements.json",
-        help="Path to pct_statements.json. Used by: evaluate.",
-    )
-    parser.add_argument(
-        "--output_path",
-        type=str,
-        help=(
-            "Output JSON file path for evaluation results.\n"
-            "e.g. results/base/pythia_160m.json\n"
-            "Required for: evaluate."
-        ),
-    )
-
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        help="Output directory. Used by: prepare_corpus, tokenize, finetune, plot.",
-    )
-    parser.add_argument(
-        "--corpus_dir",
-        type=str,
-        default="data/corpus",
-        help="Directory of cleaned corpus articles. Used by: tokenize.",
-    )
-    parser.add_argument(
-        "--tokenized_dir",
-        type=str,
-        default="data/tokenized",
-        help="Directory of tokenized datasets. Used by: finetune.",
-    )
-    parser.add_argument(
-        "--n_articles",
-        type=int,
-        default=1000,
-        help="Number of articles per condition to sample. Used by: prepare_corpus.",
-    )
-
-    parser.add_argument(
-        "--condition",
-        choices=["left", "right"],
-        help="Corpus political condition. Required for: finetune.",
-    )
-
-    parser.add_argument(
-        "--results_dir",
-        type=str,
-        default="results/",
-        help="Directory containing base/ and finetuned/ JSON results. Used by: plot.",
-    )
-    
-    parser.add_argument(
-    "--left_path",
-    type=str,
-    default="data/BIGNEWSBLN_left.json",
-    help="Path to BIGNEWSBLN left corpus JSON. Used by: prepare_corpus.",
-)
-    parser.add_argument(
-        "--right_path",
-        type=str,
-        default="data/BIGNEWSBLN_right.json",
-        help="Path to BIGNEWSBLN right corpus JSON. Used by: prepare_corpus.",
-    )
+    # held-out steps (Step A)
+    parser.add_argument("--n_heldout", type=int, default=500,
+                        help="Held-out articles per side. Default 500.")
+    parser.add_argument("--heldout_path", type=str,
+                        help="Path to heldout_{left,right}.json for eval_heldout.")
+    parser.add_argument("--heldout_side", choices=["left", "right"],
+                        help="Which held-out side this run scores (metadata).")
+    parser.add_argument("--max_articles", type=int, default=None,
+                        help="Cap articles scored (smoke tests).")
+    parser.add_argument("--n_masks", type=int, default=3,
+                        help="Random masks per chunk for DLM article PLL.")
+    parser.add_argument("--mask_fraction", type=float, default=0.15,
+                        help="Mask fraction per draw. Matches training (0.15).")
+    parser.add_argument("--no_dedup", action="store_true", default=False,
+                        help="Skip cross-side wire-service dedup pass "
+                             "(faster prepare_heldout, dirtier contrast).")
 
     return parser.parse_args()
 
 
-def run_evaluate(args):
-    """Load model and run PCT evaluation. Saves results to output_path."""
-    import json
-    import os
+def _require(args, fields, step):
+    for f in fields:
+        if getattr(args, f) in (None, ""):
+            print(f"Error: --{f} is required for --step {step}")
+            sys.exit(1)
+
+
+def _load_model_for(args):
     from models.model_loader import load_model, load_finetuned
-
-    if args.model is None:
-        print("Error: --model is required for --step evaluate")
-        sys.exit(1)
-    if args.model_type is None:
-        print("Error: --model_type is required for --step evaluate")
-        sys.exit(1)
-    if args.output_path is None:
-        print("Error: --output_path is required for --step evaluate")
-        sys.exit(1)
-
     if args.checkpoint is None:
         print(f"Loading base model: {args.model}")
-        model, tokenizer = load_model(
-            args.model,
-            device=args.device,
-            quantize=args.quantize,
-        )
+        return load_model(args.model, device=args.device, quantize=args.quantize)
+    print(f"Loading finetuned model: {args.model} from {args.checkpoint}")
+    return load_finetuned(args.model, checkpoint_path=args.checkpoint,
+                          device=args.device, quantize=args.quantize)
+
+
+def run_evaluate(args):
+    import json, os
+    from utils.evaluation import evaluate_pct, TEMPLATE_SETS
+
+    _require(args, ["model", "model_type", "output_path"], "evaluate")
+
+    if args.templates == "all":
+        template_sets = tuple(TEMPLATE_SETS.keys())
+    elif args.templates in TEMPLATE_SETS:
+        template_sets = (args.templates,)
     else:
-        print(f"Loading finetuned model: {args.model} from {args.checkpoint}")
-        model, tokenizer = load_finetuned(
-            args.model,
-            checkpoint_path=args.checkpoint,
-            device=args.device,
-            quantize=args.quantize,
-        )
+        print(f"Error: unknown template set '{args.templates}'. "
+              f"Choose from {list(TEMPLATE_SETS)} or 'all'.")
+        sys.exit(1)
 
-    from utils.evaluation import evaluate_pct
-    print(f"Running PCT evaluation ({args.model_type.upper()})...")
+    model, tokenizer = _load_model_for(args)
+
+    print(f"Running PCT evaluation ({args.model_type.upper()}), "
+          f"templates={template_sets}, timestep={args.timestep}...")
     results = evaluate_pct(
-        model=model,
-        tokenizer=tokenizer,
-        model_type=args.model_type,
+        model=model, tokenizer=tokenizer, model_type=args.model_type,
         statements_path=args.statements_path,
+        template_sets=template_sets, timestep=args.timestep,
     )
-
-    results["model"]      = args.model
+    results["model"] = args.model
     results["model_type"] = args.model_type
-    results["checkpoint"] = args.checkpoint if args.checkpoint else "base"
-    results["condition"]  = args.condition if args.condition else "base"
+    results["checkpoint"] = args.checkpoint or "base"
+    results["condition"] = args.condition or "base"
 
     os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
     with open(args.output_path, "w") as f:
@@ -231,74 +149,102 @@ def run_evaluate(args):
     print(f"Results saved to {args.output_path}")
     print(f"  Economic score: {results['economic']}")
     print(f"  Social score:   {results['social']}")
+    if len(template_sets) > 1:
+        for ts, block in results["by_template_set"].items():
+            print(f"  [{ts}] econ={block['economic']} soc={block['social']}")
 
 
-def run_prepare_corpus(args):
-    """Download, clean, and subsample the POLITICS dataset."""
-    if args.output_dir is None:
-        print("Error: --output_dir is required for --step prepare_corpus")
-        sys.exit(1)
-    from utils.preprocess import prepare_corpus
-    prepare_corpus(output_dir=args.output_dir, n_articles=args.n_articles, left_path=args.left_path, right_path=args.right_path,)
-
-
-def run_tokenize(args):
-    """Tokenize the cleaned corpus for a specific model."""
-    if args.model is None:
-        print("Error: --model is required for --step tokenize")
-        sys.exit(1)
-    if args.output_dir is None:
-        print("Error: --output_dir is required for --step tokenize")
-        sys.exit(1)
-    from utils.preprocess import tokenize_corpus
-    tokenize_corpus(
-        model_name=args.model,
-        corpus_dir=args.corpus_dir,
-        output_dir=args.output_dir,
+def run_prepare_heldout(args):
+    from utils.heldout_sampling import prepare_heldout
+    _require(args, ["output_dir"], "prepare_heldout")
+    prepare_heldout(
+        left_path=args.left_path, right_path=args.right_path,
+        corpus_dir=args.corpus_dir, output_dir=args.output_dir,
+        n_heldout=args.n_heldout, dedup_cross_side=not args.no_dedup,
     )
 
 
+def run_eval_heldout(args):
+    import json, os
+    from utils.evaluation import evaluate_heldout
+
+    _require(args, ["model", "model_type", "condition",
+                    "heldout_path", "heldout_side", "output_path"],
+             "eval_heldout")
+    if args.condition != "base" and args.checkpoint is None:
+        print("Error: --checkpoint required unless --condition base")
+        sys.exit(1)
+
+    model, tokenizer = _load_model_for(args)
+
+    print(f"Held-out PLL: model={args.model} condition={args.condition} "
+          f"side={args.heldout_side} n_masks={args.n_masks} "
+          f"mask_fraction={args.mask_fraction}")
+    results = evaluate_heldout(
+        model=model, tokenizer=tokenizer, model_type=args.model_type,
+        heldout_path=args.heldout_path, max_articles=args.max_articles,
+        n_masks=args.n_masks, mask_fraction=args.mask_fraction,
+    )
+    results.update({
+        "model": args.model, "model_type": args.model_type,
+        "condition": args.condition, "heldout_side": args.heldout_side,
+        "checkpoint": args.checkpoint or "base",
+    })
+
+    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
+    with open(args.output_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"Results saved to {args.output_path}")
+    print(f"  Mean PLL over {results['n_articles']} articles: "
+          f"{results['mean_pll']:.4f}")
+
+
+def run_stats(args):
+    from utils.stats import run_all_stats
+    output_path = args.output_path or "results/stats_report.json"
+    run_all_stats(results_dir=args.results_dir, output_path=output_path)
+
+
+# corpus/finetune/plot handlers
+
+def run_prepare_corpus(args):
+    _require(args, ["output_dir"], "prepare_corpus")
+    from utils.preprocess import prepare_corpus
+    prepare_corpus(output_dir=args.output_dir, n_articles=args.n_articles,
+                   left_path=args.left_path, right_path=args.right_path)
+
+
+def run_tokenize(args):
+    _require(args, ["model", "output_dir"], "tokenize")
+    from utils.preprocess import tokenize_corpus
+    tokenize_corpus(model_name=args.model, corpus_dir=args.corpus_dir,
+                    output_dir=args.output_dir)
+
+
 def run_finetune(args):
-    """LoRA finetune a model on a corpus condition."""
-    if args.model is None:
-        print("Error: --model is required for --step finetune")
-        sys.exit(1)
-    if args.model_type is None:
-        print("Error: --model_type is required for --step finetune")
-        sys.exit(1)
-    if args.condition is None:
-        print("Error: --condition is required for --step finetune")
-        sys.exit(1)
-    if args.output_dir is None:
-        print("Error: --output_dir is required for --step finetune")
-        sys.exit(1)
+    _require(args, ["model", "model_type", "condition", "output_dir"], "finetune")
     from training.finetune import run_finetune as _finetune
     _finetune(args)
 
 
 def run_plot(args):
-    """Generate political compass plots from results JSONs."""
-    if args.output_dir is None:
-        print("Error: --output_dir is required for --step plot")
-        sys.exit(1)
+    _require(args, ["output_dir"], "plot")
     from utils.plot_compass import plot_compass
-    plot_compass(
-        results_dir=args.results_dir,
-        output_dir=args.output_dir,
-    )
+    plot_compass(results_dir=args.results_dir, output_dir=args.output_dir)
 
 
 def main():
     args = parse_args()
-
     dispatch = {
-        "evaluate":       run_evaluate,
-        "prepare_corpus": run_prepare_corpus,
-        "tokenize":       run_tokenize,
-        "finetune":       run_finetune,
-        "plot":           run_plot,
+        "evaluate":        run_evaluate,
+        "prepare_corpus":  run_prepare_corpus,
+        "tokenize":        run_tokenize,
+        "finetune":        run_finetune,
+        "plot":            run_plot,
+        "prepare_heldout": run_prepare_heldout,
+        "eval_heldout":    run_eval_heldout,
+        "stats":           run_stats,
     }
-
     dispatch[args.step](args)
 
 

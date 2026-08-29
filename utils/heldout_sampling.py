@@ -1,29 +1,3 @@
-"""
-utils/heldout_sampling.py
-
-Step A data prep: sample held-out evaluation articles from BIGNEWSBLN
-that are DISJOINT from the training corpus.
-
-Exclusion works by text hash, not index: the committed training files
-(data/corpus/left.json / right.json) are loaded, every training article
-text is hashed, and any BIGNEWSBLN article whose hash matches is skipped.
-This reconstructs the exclusion set for finetuning runs that already
-happened — no retraining needed.
-
-BIGNEWSBLN files are large (~779k articles/side), so they are streamed
-with ijson rather than loaded into memory, matching the prepare_corpus
-approach.
-
-Also drops likely wire-service duplicates ACROSS sides: any article whose
-hash appears in BOTH the left and right source files is excluded from
-both held-out sets, so the held-out contrast is not diluted by AP/Reuters
-content present on both sides (known BIGNEWSBLN issue).
-
-Output format (consumed by evaluation_v2.evaluate_heldout):
-    data/corpus/heldout_left.json   [{"text": "..."}, ...]
-    data/corpus/heldout_right.json  [{"text": "..."}, ...]
-"""
-
 import hashlib
 import json
 import os
@@ -33,10 +7,6 @@ import ijson
 
 
 def _text_of(article) -> str:
-    """
-    BIGNEWSBLN articles store text as a list of paragraphs under 'text';
-    fall back to common alternatives. Mirror prepare_corpus if it differs.
-    """
     t = article.get("text", article.get("content", article.get("body", "")))
     if isinstance(t, list):
         t = " ".join(str(p) for p in t)
@@ -52,8 +22,7 @@ def _load_training_hashes(corpus_dir: str) -> set:
     for fname in ("left.json", "right.json"):
         path = os.path.join(corpus_dir, fname)
         if not os.path.exists(path):
-            print(f"WARNING: training corpus file not found: {path} — "
-                  f"exclusion will be incomplete.")
+            print(f"WARNING: training corpus file not found: {path} ")
             continue
         with open(path, "r") as f:
             articles = json.load(f)
@@ -64,7 +33,6 @@ def _load_training_hashes(corpus_dir: str) -> set:
 
 
 def _stream_hashes(source_path: str, min_chars: int) -> set:
-    """One cheap pass over a BIGNEWSBLN file collecting text hashes."""
     hashes = set()
     with open(source_path, "rb") as f:
         for article in ijson.items(f, "item"):
@@ -81,11 +49,6 @@ def _reservoir_sample(
     min_chars: int,
     seed: int,
 ):
-    """
-    Single-pass reservoir sampling over one BIGNEWSBLN file, skipping
-    excluded hashes. Uniform over all eligible articles regardless of
-    file order.
-    """
     rng = random.Random(seed)
     reservoir, seen = [], 0
     with open(source_path, "rb") as f:
@@ -116,14 +79,6 @@ def prepare_heldout(
     seed: int = 42,
     dedup_cross_side: bool = True,
 ):
-    """
-    Build heldout_left.json and heldout_right.json.
-
-    Exclusions applied, in order:
-        1. every article used in training (hash match vs left.json/right.json)
-        2. every article appearing in BOTH source files (wire-service
-           duplicates), if dedup_cross_side
-    """
     exclude = _load_training_hashes(corpus_dir)
 
     if dedup_cross_side:
