@@ -36,7 +36,8 @@ def _load_model_for(args):
 
 def run_evaluate(args):
     import json
-    from utils.evaluation import evaluate_pct, TEMPLATE_SETS
+    from utils.evaluation import TEMPLATE_SETS
+    from utils.evaluation import evaluate_pct_pmi, TEMPLATE_SETS
 
     if args.templates == "all":
         template_sets = tuple(TEMPLATE_SETS.keys())
@@ -50,7 +51,7 @@ def run_evaluate(args):
 
     print(f"Running PCT evaluation ({args.model_type.upper()}), "
           f"templates={template_sets}, timestep={args.timestep}...")
-    results = evaluate_pct(
+    results = evaluate_pct_pmi(
         model=model, tokenizer=tokenizer, model_type=args.model_type,
         statements_path=args.statements_path,
         template_sets=template_sets, timestep=args.timestep,
