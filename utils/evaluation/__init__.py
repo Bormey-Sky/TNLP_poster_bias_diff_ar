@@ -2,6 +2,7 @@ from utils.constants import TEMPLATE_SETS
 from utils.evaluation.scoring import compute_pll, compute_article_pll
 from utils.evaluation.heldout_eval import evaluate_heldout
 from utils.evaluation.pct_eval import score_statement, evaluate_pct
+from utils.evaluation.pct_eval_pmi import score_statement_pmi, evaluate_pct_pmi
  
 __all__ = [
     "TEMPLATE_SETS",
