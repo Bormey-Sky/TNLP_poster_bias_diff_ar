@@ -113,7 +113,8 @@ def evaluate_pct(
                 "raw_scores": {k: result[k] for k in STANCE_ORDER},
             }
             axis_key = "economic" if entry["axis"] == "economic" else "social"
-            axis_stances[ts][axis_key].append(result["stance"])
+            # axis_stances[ts][axis_key].append(result["stance"])
+            axis_stances[ts][axis_key].append(entry.get("polarity", 1) * result["stance"])
 
         primary = template_sets[0]
         record["stance"] = record["by_template_set"][primary]["stance"]
