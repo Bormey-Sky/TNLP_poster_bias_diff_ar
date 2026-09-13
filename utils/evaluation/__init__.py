@@ -10,4 +10,6 @@ __all__ = [
     "evaluate_heldout",
     "score_statement",
     "evaluate_pct",
+    "evaluate_pct_pmi",
+    "score_statement_pmi",
 ]
