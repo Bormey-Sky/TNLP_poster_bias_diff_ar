@@ -18,11 +18,40 @@ from utils.stats.pct_loading import _load_pct
 
 
 def _stance_by_id(pct_json):
+    """
+    Per-statement stances, POLARITY-SIGNED.
+
+    evaluate_pct applies polarity when it aggregates the axis scores, but
+    stores `stance` unsigned in each per-statement record. Without the
+    multiplication below these stats would describe mean agreeableness
+    rather than left-right position, and would not reconcile with the
+    economic/social scores in the same file.
+
+    polarity = +1 when agreement moves the score right (economic) or
+    authoritarian (social); -1 when it moves left / libertarian.
+    Falls back to +1 for results produced with the unsigned statements
+    file -- see the reconciliation warning in directional_effect.
+    """
     return {
-        rec["id"]: {"stance": rec["stance"], "axis": rec["axis"],
+        rec["id"]: {"stance": rec.get("polarity", 1) * rec["stance"],
+                    "axis": rec["axis"],
                     "topic": rec.get("topic"), "text": rec["text"]}
         for rec in pct_json["per_statement"]
     }
+
+
+def _check_reconciles(pct_json, signed, label):
+    """Warn if recomputed axis means disagree with the file's aggregates."""
+    for axis in ("economic", "social"):
+        vals = [v["stance"] for v in signed.values() if v["axis"] == axis]
+        if not vals or axis not in pct_json:
+            continue
+        recomputed = round(sum(vals) / len(vals), 4)
+        if abs(recomputed - pct_json[axis]) > 1e-3:
+            print(f"  WARNING [{label}]: recomputed {axis}={recomputed} but "
+                  f"file reports {pct_json[axis]}. Result likely predates the "
+                  f"polarity fix -- rerun evaluate with "
+                  f"pct_statements_polarity.json.")
 
 
 def directional_effect(results_dir, model_name):
@@ -34,6 +63,10 @@ def directional_effect(results_dir, model_name):
 
     sl, sr = _stance_by_id(left), _stance_by_id(right)
     sb = _stance_by_id(base) if base else {}
+    _check_reconciles(left, sl, f"{model_name} left")
+    _check_reconciles(right, sr, f"{model_name} right")
+    if base:
+        _check_reconciles(base, sb, f"{model_name} base")
     common_ids = sorted(set(sl) & set(sr))
 
     out = {"model": model_name, "n_statements": len(common_ids), "axes": {}}
@@ -46,7 +79,10 @@ def directional_effect(results_dir, model_name):
         p = paired_permutation_pvalue(deltas)
 
         axis_block = {
-            "D_left_minus_right": {"mean": mean, "ci95": [lo, hi], "p_perm": p},
+            "D_left_minus_right": {
+                "mean": mean, "ci95": [lo, hi], "p_perm": p,
+                "n": len(ids), "n_changed": int((deltas != 0).sum()),
+            },
             "direction_recovered": bool(hi < 0),  # left-FT more negative
         }
         if sb:
@@ -57,6 +93,7 @@ def directional_effect(results_dir, model_name):
                 axis_block[f"shift_from_base_{cond}FT"] = {
                     "mean": m, "ci95": [l, h],
                     "p_perm": paired_permutation_pvalue(shift),
+                    "n": len(shift), "n_changed": int((shift != 0).sum()),
                 }
         out["axes"][axis] = axis_block
 

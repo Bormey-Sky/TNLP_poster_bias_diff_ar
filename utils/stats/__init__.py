@@ -16,6 +16,14 @@ Per-statement deltas (Step C):
 Paraphrase decomposition (Step D):
     Spread of axis scores across template sets vs across conditions,
     reported as a sigma ratio.
+
+Dose contrast:
+    Delta_dose = axis(cond, 5k) - axis(cond, 1k), per condition and axis.
+    Answers "did more injected data move the score further, and which
+    way", which the left-vs-right D cannot express.
+
+All PCT contrasts use polarity-signed per-statement stances; see
+direction_stats._stance_by_id.
 """
 
 import glob
@@ -26,6 +34,7 @@ from utils.stats.bootstrap import bootstrap_ci, paired_permutation_pvalue
 from utils.stats.injection_stats import injection_contrast
 from utils.stats.direction_stats import directional_effect
 from utils.stats.paraphrase_stats import paraphrase_decomposition
+from utils.stats.dose_stats import dose_effect
 
 
 def run_all_stats(results_dir, output_path):
@@ -46,12 +55,24 @@ def run_all_stats(results_dir, output_path):
             "paraphrase": paraphrase_decomposition(results_dir, model),
         }
 
+    # dose contrasts: pair each model with its _v2 counterpart
+    dose = {}
+    for model in sorted(models):
+        if model.endswith("_v2"):
+            continue
+        if f"{model}_v2" in models:
+            dose[model] = dose_effect(results_dir, model, f"{model}_v2")
+    if dose:
+        report["_dose"] = dose
+
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(report, f, indent=2)
 
     print(f"\n{'='*70}\nSTATS SUMMARY\n{'='*70}")
     for model, r in report.items():
+        if model == "_dose":
+            continue
         print(f"\n--- {model} ---")
         inj = r["injection"]
         print(f"  injection_verified: {inj.get('injection_verified')}")
@@ -62,12 +83,25 @@ def run_all_stats(results_dir, output_path):
                 print(f"  D({axis}) = {dd['mean']:+.4f} "
                       f"CI[{dd['ci95'][0]:+.4f}, {dd['ci95'][1]:+.4f}] "
                       f"p={dd['p_perm']:.4f} "
+                      f"(n={dd.get('n')}, changed={dd.get('n_changed')}) "
                       f"recovered={block['direction_recovered']}")
         p = r["paraphrase"]
         if "axes" in p:
             for axis, block in p["axes"].items():
                 print(f"  paraphrase/condition sigma ratio ({axis}): "
                       f"{block['ratio_paraphrase_over_condition']:.2f}")
+    for model, d in report.get("_dose", {}).items():
+        print(f"\n--- {model}: dose (5k minus 1k) ---")
+        for cond, block in d["conditions"].items():
+            if "error" in block:
+                print(f"  {cond}: {block['error']}")
+                continue
+            for axis, b in block.items():
+                dd = b["delta_high_minus_low"]
+                print(f"  {cond:5s} {axis:9s} {dd['mean']:+.4f} "
+                      f"CI[{dd['ci95'][0]:+.4f}, {dd['ci95'][1]:+.4f}] "
+                      f"p={dd['p_perm']:.4f} (changed={dd['n_changed']}/{dd['n']})")
+
     print(f"\nFull report: {output_path}")
     return report
 
@@ -78,5 +112,6 @@ __all__ = [
     "injection_contrast",
     "directional_effect",
     "paraphrase_decomposition",
+    "dose_effect",
     "run_all_stats",
 ]
