@@ -92,9 +92,10 @@ def evaluate_pct(
         record = {
             "id": entry["id"],
             "axis": entry["axis"],
+            "polarity": entry.get("polarity", 1),
             "page": entry.get("page"),
             "text": entry["text"],
-            "topic": entry.get("topic"),  # optional manual tag (Step C)
+            "topic": entry.get("topic"),  
             "by_template_set": {},
         }
         for ts in template_sets:
