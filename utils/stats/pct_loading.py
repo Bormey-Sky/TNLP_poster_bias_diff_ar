@@ -4,7 +4,14 @@ import os
 
 def _load_pct(results_dir, model_name, condition):
     if condition == "base":
-        candidates = [os.path.join(results_dir, "base", f"{model_name}.json")]
+        candidates = [
+            os.path.join(results_dir, "base", f"{model_name}.json"),
+        ]
+        # _v2 is an injection dose, not a different base model
+        if model_name.endswith("_v2"):
+            candidates.append(
+                os.path.join(results_dir, "base", f"{model_name[:-3]}.json")
+            )
     else:
         candidates = [
             os.path.join(results_dir, "finetuned", f"{model_name}_{condition}.json")
