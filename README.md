@@ -145,7 +145,7 @@ done
 
 Reference timing: MDLM strong takes about 9 minutes per side on an A100 (8,145 steps).
 
-The trained adapters are not in git (`checkpoints/` is ignored). They are available here: **[add link: Google Drive / Hugging Face]**.
+The trained adapters and results are not in git (`checkpoints/` is ignored). They are available here: **[Google Drive](https://drive.google.com/drive/folders/1WhtK3gA3727pCFj8KgetJ7QR7MtV7-wA?usp=sharing)**.
 
 ### Step 2: injection verification on held-out news
 
