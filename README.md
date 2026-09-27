@@ -1,4 +1,4 @@
-# How Political Bias Moves from News Corpora into Language Models
+# Can the Political Compass Test See Injected Bias?
 
 Code, data and results for the TNLP research poster (Trier University, NLP module, 2026).
 
@@ -10,36 +10,6 @@ Code, data and results for the TNLP research poster (Trier University, NLP modul
 |---|---|---|---|
 | weak | 1,000 | 16 / 32 | 3 |
 | strong | 5,000 | 32 / 64 | 5 |
-
-The pipeline then:
-1. verifies the injection on held-out news using per-token (pseudo-)log-likelihood;
-2. scores all 62 PCT propositions with NormPLL under four paraphrased stance templates;
-3. tests the directional effect `D = PCT(left-FT) − PCT(right-FT)` with bootstrap CIs and sign-flip permutation tests.
-
-`notebooks/poster_pipeline.ipynb` is the executed record of the run behind the poster, with every step's output and all poster figures. Open it on GitHub to see the results without running anything.
-
----
-
-## Repository layout
-
-```
-main.py                     CLI entry point: python main.py <step> ...
-models/                     model registry, loading (+ transformers compatibility patches)
-training/                   LoRA config + finetuning (custom masked-LM trainer for MDLM)
-utils/preprocess/           corpus sampling/cleaning, tokenization
-utils/heldout_sampling.py   held-out set construction
-utils/evaluation/           NormPLL scoring, PCT evaluation, held-out evaluation
-utils/stats/                injection contrast, directional effect D, paraphrase decomposition, dose effect
-utils/constants.py          stance templates (4 paraphrase sets), Likert weights, seeds
-data/pct_statements.json    62 PCT propositions + axis + polarity (our annotation, see note below)
-data/corpus/                weak corpus: left/right.json (1,000 articles each) + heldout_{left,right}.json (500 each)
-data/corpus_2/              strong corpus: left/right.json (5,000 articles each)
-data/tokenized{,_2}/        tokenized training sets per model and condition
-results/                    all JSON outputs used on the poster (see "Results")
-notebooks/                  executed pipeline notebook + poster figures
-```
-
-Naming convention: a `_v2` suffix (e.g. `pythia_160m_v2_left`) means the **strong (5k)** condition; no suffix means **weak (1k)**. The base (un-finetuned) model is shared by both strengths, and the stats code falls back automatically from `base/<model>_v2.json` to `base/<model>.json`.
 
 ---
 
@@ -63,31 +33,8 @@ pip install "https://github.com/lesj0610/flash-attention/releases/download/v2.8.
 ```
 
 Hardware notes:
-- MDLM needs an Ampere-or-newer GPU for flash-attention; a T4 is not enough.
-- Pythia runs on any GPU, or even on CPU (slowly).
 - Both base models are public on the Hugging Face Hub (`EleutherAI/pythia-160m`, `kuleshov-group/mdlm-owt`), so no HF token is needed.
 - Compatibility patches for transformers 5.x are applied automatically when `models/model_loader.py` is imported.
-
----
-
-## Quick check (CPU, seconds): reproduce the poster statistics
-
-All scored outputs are committed in `results/`, so you can recompute every statistic on the poster without a GPU:
-
-```bash
-python main.py stats --results_dir results --output_path /tmp/stats_check.json
-```
-
-The printed summary and `/tmp/stats_check.json` should match `results/stats_report.json` exactly. The random generator is seeded (42), so bootstrap CIs are deterministic. The poster numbers map to the report as follows:
-
-| Poster | Report key | Value |
-|---|---|---|
-| Finding 1: injection contrast, Pythia weak → strong | `pythia_160m[_v2].injection.heldout_{left,right}.matched_minus_opposed_pll.mean` | left 0.0083 → 0.0281, right 0.0170 → 0.0499 (all p < 0.001) |
-| Finding 1: MDLM weak right side not verified | `mdlm_169m.injection.heldout_right` | 95% CI [−0.0014, 0.0011], p = 0.74 |
-| Finding 2: D, Pythia weak / strong, economic | `pythia_160m[_v2].direction.axes.economic.D_left_minus_right` | −1.07 [−2.14, 0.00] / −0.71 [−4.29, 2.86] |
-| Finding 2: D, Pythia strong, social | `pythia_160m_v2.direction.axes.social.D_left_minus_right` | −1.67 [−3.33, −0.10], p = 0.07 |
-| Finding 2: D, MDLM strong, economic / social | `mdlm_169m_v2.direction.axes.*` | +0.71 [−2.86, 4.29] / +0.21 [0.00, 0.52] |
-| Finding 3: paraphrase ÷ condition spread | `*.paraphrase.axes.*.ratio_paraphrase_over_condition` | 1.4–5.3× across all checkpoints (1.9–5.2× verified only) |
 
 ---
 
