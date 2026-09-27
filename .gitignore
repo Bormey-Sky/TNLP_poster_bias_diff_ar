@@ -28,3 +28,6 @@ Thumbs.db
 # Logs
 *.log
 wandb/
+
+data/tokenized/
+data/tokenized_2/
